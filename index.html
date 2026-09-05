@@ -64,8 +64,8 @@
 
   form{display:flex;flex-direction:column;gap:10px;}
   .field label{font-size:12px;color:var(--ink-muted);display:block;margin-bottom:4px;}
-  .field input{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:4px;font-family:'Inter',sans-serif;font-size:14px;background:#fff;color:var(--ink);}
-  .field input:focus{outline:none;border-color:var(--primary);}
+  .field input, .field select{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:4px;font-family:'Inter',sans-serif;font-size:14px;background:#fff;color:var(--ink);}
+  .field input:focus, .field select:focus{outline:none;border-color:var(--primary);}
   .field-row{display:flex;gap:10px;}
   .field-row .field{flex:1;}
   button.primary{background:var(--primary);color:#F4F5F0;border:none;padding:11px;border-radius:4px;font-size:14px;font-weight:600;cursor:pointer;}
@@ -123,10 +123,13 @@
 const APP_VERSION = '1.0';
 const APP_BUILD = '2026-09-03';
 
-let rows = [];      // {id, date:'YYYY-MM-DD', dana, dividen, equity, ihsg}
-let watchlist = [];  // {id, kode, nama, eps, peMean, price, hargaWajar, mos, status, action, updatedAt}
+let rows = [];         // {id, date:'YYYY-MM-DD', dana, dividen, equity, ihsg}
+let watchlist = [];    // {id, kode, nama, eps, peMean, price, hargaWajar, mos, status, action, updatedAt}
+let transactions = []; // {id, date:'YYYY-MM-DD', type:'BELI'|'JUAL', kode, lembar, harga, total, catatan}
+
 let editingId = null;
 let editingWatchId = null;
+let editingTxId = null;
 let loaded = false;
 let yearFilter = 'all';
 
@@ -137,9 +140,6 @@ const fmtMonth = s => { const d = new Date(s+'T00:00:00'); return d.toLocaleDate
 
 const hasClaudeStorage = (typeof window.storage !== 'undefined');
 
-// ---------- Google Sheets (Apps Script) sebagai database pusat ----------
-// Isi URL Web App Apps Script Anda di sini supaya permanen untuk semua pengunjung
-// (setelah deploy script, tempel URL "…/exec" di antara tanda kutip di bawah).
 const DEFAULT_SCRIPT_URL = '';
 
 function getScriptUrl(){
@@ -148,7 +148,7 @@ function getScriptUrl(){
 function setScriptUrl(url){
   localStorage.setItem('apps-script-url', url.trim());
 }
-let syncStatus = { connected: !!getScriptUrl(), state:'idle', message:'' }; // state: idle|loading|saving|error
+let syncStatus = { connected: !!getScriptUrl(), state:'idle', message:'' };
 
 function toApiPortfolioRow(r){
   return { id:r.id, tanggal:r.date, dana:r.dana, dividen:r.dividen||0, equity:r.equity, ihsg:r.ihsg };
@@ -164,6 +164,15 @@ function fromApiWatchlistRow(r){
     status:r.status||'', action:r.action||'', updatedAt:r.updatedAt||''
   };
 }
+function toApiTransactionRow(t){
+  return { id:t.id, tanggal:t.date, tipe:t.type, kode:t.kode, lembar:t.lembar, harga:t.harga, total:t.total, catatan:t.catatan||'' };
+}
+function fromApiTransactionRow(t){
+  return {
+    id:String(t.id), date:String(t.tanggal), type:String(t.tipe), kode:String(t.kode||'').toUpperCase(),
+    lembar:Number(t.lembar)||0, harga:Number(t.harga)||0, total:Number(t.total)||0, catatan:t.catatan||''
+  };
+}
 
 async function loadData(){
   const url = getScriptUrl();
@@ -176,8 +185,11 @@ async function loadData(){
       if(json.ok){
         rows = (json.portfolio||[]).map(fromApiPortfolioRow);
         watchlist = (json.watchlist||[]).map(fromApiWatchlistRow);
+        transactions = (json.transactions||[]).map(fromApiTransactionRow);
+
         localStorage.setItem('nav-tracker-data-cache', JSON.stringify(rows));
         localStorage.setItem('watchlist-cache', JSON.stringify(watchlist));
+        localStorage.setItem('transactions-cache', JSON.stringify(transactions));
         syncStatus = {connected:true, state:'idle', message:'Tersambung ke Google Sheets.'};
       } else {
         throw new Error(json.error || 'Respons tidak valid');
@@ -186,26 +198,28 @@ async function loadData(){
       console.error('Gagal memuat dari Google Sheets', e);
       const cached = localStorage.getItem('nav-tracker-data-cache');
       const cachedW = localStorage.getItem('watchlist-cache');
+      const cachedT = localStorage.getItem('transactions-cache');
       rows = cached ? JSON.parse(cached) : [];
       watchlist = cachedW ? JSON.parse(cachedW) : [];
-      syncStatus = {connected:true, state:'error', message:'Gagal terhubung ke Google Sheets. Menampilkan data cache terakhir di perangkat ini.'};
+      transactions = cachedT ? JSON.parse(cachedT) : [];
+      syncStatus = {connected:true, state:'error', message:'Gagal terhubung ke Google Sheets. Menampilkan data cache.'};
     }
   } else {
-    // mode lokal (belum dikonfigurasi ke Google Sheets)
     try{
       if(hasClaudeStorage){
         const r = await window.storage.get('nav-tracker-data', false);
         rows = (r && r.value) ? JSON.parse(r.value) : [];
         const w = await window.storage.get('watchlist-data', false);
         watchlist = (w && w.value) ? JSON.parse(w.value) : [];
+        const t = await window.storage.get('transactions-data', false);
+        transactions = (t && t.value) ? JSON.parse(t.value) : [];
       } else {
-        const raw = localStorage.getItem('nav-tracker-data');
-        rows = raw ? JSON.parse(raw) : [];
-        const rawW = localStorage.getItem('watchlist-data');
-        watchlist = rawW ? JSON.parse(rawW) : [];
+        rows = JSON.parse(localStorage.getItem('nav-tracker-data') || '[]');
+        watchlist = JSON.parse(localStorage.getItem('watchlist-data') || '[]');
+        transactions = JSON.parse(localStorage.getItem('transactions-data') || '[]');
       }
-    }catch(e){ rows = []; watchlist = []; }
-    syncStatus = {connected:false, state:'idle', message:'Mode lokal — data hanya tersimpan di perangkat/browser ini. Sambungkan ke Google Sheets di tab Pengaturan supaya terpusat.'};
+    }catch(e){ rows = []; watchlist = []; transactions = []; }
+    syncStatus = {connected:false, state:'idle', message:'Mode lokal.'};
   }
   loaded = true;
   renderAll();
@@ -220,25 +234,51 @@ async function saveData(){
     try{
       const res = await fetch(url, {
         method:'POST',
-        headers:{'Content-Type':'text/plain;charset=utf-8'}, // hindari CORS preflight ke Apps Script
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
         body: JSON.stringify({action:'savePortfolio', rows: rows.map(toApiPortfolioRow)})
       });
       const json = await res.json();
       if(json.ok){
         rows = (json.portfolio||[]).map(fromApiPortfolioRow);
         syncStatus = {connected:true, state:'idle', message:'Tersimpan ke Google Sheets.'};
-      } else {
-        throw new Error(json.error || 'Gagal menyimpan');
-      }
+      } else { throw new Error(json.error || 'Gagal menyimpan'); }
     }catch(e){
-      console.error('Gagal menyimpan ke Google Sheets', e);
-      syncStatus = {connected:true, state:'error', message:'Gagal menyimpan ke Google Sheets. Perubahan disimpan sementara di perangkat ini saja.'};
+      syncStatus = {connected:true, state:'error', message:'Gagal menyimpan ke Google Sheets.'};
     }
   } else {
     try{
       if(hasClaudeStorage){ await window.storage.set('nav-tracker-data', JSON.stringify(rows), false); }
       else { localStorage.setItem('nav-tracker-data', JSON.stringify(rows)); }
-    }catch(e){ console.error('Gagal menyimpan', e); }
+    }catch(e){}
+  }
+  renderSyncStatus();
+}
+
+async function saveTransactions(){
+  localStorage.setItem('transactions-cache', JSON.stringify(transactions));
+  const url = getScriptUrl();
+  if(url){
+    syncStatus = {connected:true, state:'saving', message:'Menyimpan transaksi ke Google Sheets…'};
+    renderSyncStatus();
+    try{
+      const res = await fetch(url, {
+        method:'POST',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({action:'saveTransactions', rows: transactions.map(toApiTransactionRow)})
+      });
+      const json = await res.json();
+      if(json.ok){
+        transactions = (json.transactions||[]).map(fromApiTransactionRow);
+        syncStatus = {connected:true, state:'idle', message:'Transaksi tersimpan ke Google Sheets.'};
+      } else { throw new Error(json.error || 'Gagal menyimpan transaksi'); }
+    }catch(e){
+      syncStatus = {connected:true, state:'error', message:'Gagal menyimpan transaksi.'};
+    }
+  } else {
+    try{
+      if(hasClaudeStorage){ await window.storage.set('transactions-data', JSON.stringify(transactions), false); }
+      else { localStorage.setItem('transactions-data', JSON.stringify(transactions)); }
+    }catch(e){}
   }
   renderSyncStatus();
 }
@@ -259,7 +299,7 @@ async function saveWatchlist(){
   localStorage.setItem('watchlist-cache', JSON.stringify(watchlist));
   const url = getScriptUrl();
   if(url){
-    syncStatus = {connected:true, state:'saving', message:'Menyimpan watchlist ke Google Sheets…'};
+    syncStatus = {connected:true, state:'saving', message:'Menyimpan watchlist…'};
     renderSyncStatus();
     try{
       const res = await fetch(url, {
@@ -270,17 +310,16 @@ async function saveWatchlist(){
       const json = await res.json();
       if(json.ok){
         watchlist = (json.watchlist||[]).map(fromApiWatchlistRow);
-        syncStatus = {connected:true, state:'idle', message:'Watchlist tersimpan ke Google Sheets.'};
+        syncStatus = {connected:true, state:'idle', message:'Watchlist tersimpan.'};
       } else { throw new Error(json.error || 'Gagal menyimpan'); }
     }catch(e){
-      console.error('Gagal menyimpan watchlist', e);
-      syncStatus = {connected:true, state:'error', message:'Gagal menyimpan watchlist ke Google Sheets.'};
+      syncStatus = {connected:true, state:'error', message:'Gagal menyimpan watchlist.'};
     }
   } else {
     try{
       if(hasClaudeStorage){ await window.storage.set('watchlist-data', JSON.stringify(watchlist), false); }
       else { localStorage.setItem('watchlist-data', JSON.stringify(watchlist)); }
-    }catch(e){ console.error('Gagal menyimpan watchlist', e); }
+    }catch(e){}
   }
   renderSyncStatus();
 }
@@ -288,11 +327,11 @@ async function saveWatchlist(){
 async function refreshPrices(){
   const url = getScriptUrl();
   if(!url){
-    syncStatus = {connected:false, state:'error', message:'Ambil harga otomatis butuh koneksi ke Google Sheets (Apps Script) — sambungkan dulu di tab Pengaturan.'};
+    syncStatus = {connected:false, state:'error', message:'Update harga butuh Web App URL di Pengaturan.'};
     renderSyncStatus();
     return;
   }
-  syncStatus = {connected:true, state:'saving', message:'Mengambil harga terbaru dari Yahoo Finance…'};
+  syncStatus = {connected:true, state:'saving', message:'Mengambil harga terbaru…'};
   renderSyncStatus();
   try{
     const res = await fetch(url, {
@@ -306,7 +345,6 @@ async function refreshPrices(){
       syncStatus = {connected:true, state:'idle', message:'Harga berhasil diperbarui.'};
     } else { throw new Error(json.error || 'Gagal mengambil harga'); }
   }catch(e){
-    console.error('Gagal refresh harga', e);
     syncStatus = {connected:true, state:'error', message:'Gagal mengambil harga terbaru.'};
   }
   renderAll();
@@ -320,7 +358,53 @@ function renderSyncStatus(){
   el.textContent = syncStatus.message;
 }
 
-// ---------- mesin perhitungan NAB ----------
+// ---------- Hitung Kepemilikan Saham (Holdings) ----------
+function computeHoldings(){
+  const sorted = [...transactions].sort((a,b)=> a.date.localeCompare(b.date));
+  const holdings = {}; // { KODE: { lembar, totalCost } }
+
+  sorted.forEach(t=>{
+    const k = t.kode.toUpperCase();
+    if(!holdings[k]) holdings[k] = { lembar: 0, totalCost: 0 };
+
+    if(t.type === 'BELI'){
+      holdings[k].lembar += t.lembar;
+      holdings[k].totalCost += t.total;
+    } else if(t.type === 'JUAL'){
+      if(holdings[k].lembar > 0){
+        const avg = holdings[k].totalCost / holdings[k].lembar;
+        holdings[k].lembar = Math.max(0, holdings[k].lembar - t.lembar);
+        holdings[k].totalCost = holdings[k].lembar * avg;
+      }
+    }
+  });
+
+  return Object.keys(holdings)
+    .filter(k => holdings[k].lembar > 0)
+    .map(k => {
+      const h = holdings[k];
+      const avgPrice = h.lembar > 0 ? h.totalCost / h.lembar : 0;
+      const w = watchlist.find(x => x.kode === k);
+      const currPrice = w ? w.price : avgPrice;
+      const marketVal = h.lembar * currPrice;
+      const floatingPL = marketVal - h.totalCost;
+      const floatingPct = h.totalCost > 0 ? floatingPL / h.totalCost : 0;
+
+      return {
+        kode: k,
+        lembar: h.lembar,
+        lot: h.lembar / 100,
+        avgPrice: avgPrice,
+        totalCost: h.totalCost,
+        currPrice: currPrice,
+        marketVal: marketVal,
+        floatingPL: floatingPL,
+        floatingPct: floatingPct
+      };
+    });
+}
+
+// ---------- Mesin NAB ----------
 function compute(){
   const sorted = [...rows].sort((a,b)=> a.date.localeCompare(b.date));
   let unitPrev = 0, nabPrev = 1000, ihsgPrev = null;
@@ -385,16 +469,9 @@ function computeCAGR(computed){
   return {equity:equityCAGR, nab:nabCAGR, ihsg:ihsgCAGR};
 }
 
-// ---------- filter per tahun ----------
 function getYearOf(dateStr){ return new Date(dateStr+'T00:00:00').getFullYear(); }
+function getAvailableYears(computed){ return [...new Set(computed.map(r=>getYearOf(r.date)))].sort((a,b)=>b-a); }
 
-function getAvailableYears(computed){
-  const years = new Set(computed.map(r=>getYearOf(r.date)));
-  return [...years].sort((a,b)=>b-a);
-}
-
-// Mengembalikan subset computed untuk tahun tertentu, disisipi 1 baris baseline
-// (entri terakhir sebelum tahun itu) supaya grafik & return dihitung relatif ke awal tahun.
 function getYearSlice(computed, year){
   const yearRows = computed.filter(r => getYearOf(r.date) === year);
   if(yearRows.length===0) return [];
@@ -415,12 +492,12 @@ function getYearStats(computed, year){
   return {slice, nabReturn, ihsgReturn, totalDana, totalDividen, equityEnd:last.equity, equityStart:first.equity};
 }
 
-// ---------- render ringkasan ----------
+// ---------- Render Ringkasan ----------
 function renderRingkasan(){
   const el = document.getElementById('view-ringkasan');
   const computed = compute();
   if(computed.length===0){
-    el.innerHTML = `<div class="card"><div class="empty">Belum ada data.<br>Tambahkan setoran awal di tab "Input &amp; Riwayat".</div></div>`;
+    el.innerHTML = `<div class="card"><div class="empty">Belum ada data.<br>Tambahkan setoran awal di tab "Portofolio".</div></div>`;
     return;
   }
   const last = computed[computed.length-1];
@@ -503,7 +580,7 @@ function renderRingkasan(){
 
     <div class="card">
       <h2>NAB vs IHSG (rebased ke 1000)</h2>
-      <p class="desc">Membandingkan kinerja murni investasi Anda terhadap IHSG, tidak terpengaruh besar/kecilnya setoran.</p>
+      <p class="desc">Membandingkan kinerja murni investasi Anda terhadap IHSG.</p>
       ${activeComputed.length>=2 ? `
         <div class="chart-wrap">${buildChart(activeComputed)}</div>
         <div class="legend">
@@ -574,15 +651,148 @@ function shortMonth(dateStr){
   return d.toLocaleDateString('id-ID',{month:'short',year:'2-digit'});
 }
 
-// ---------- render data/input ----------
+// ---------- Render Tab Portofolio ----------
 function renderData(){
   const el = document.getElementById('view-data');
   const computed = compute();
+  const holdings = computeHoldings();
   const editing = editingId ? rows.find(r=>r.id===editingId) : null;
+  const editingTx = editingTxId ? transactions.find(t=>t.id===editingTxId) : null;
 
   el.innerHTML = `
+    <!-- FITUR BARU: FORM BELI / JUAL SAHAM -->
     <div class="card">
-      <h2>${editing ? 'Ubah entri' : (rows.length===0 ? 'Setoran awal' : 'Tambah entri bulan ini')}</h2>
+      <h2>${editingTx ? 'Ubah Transaksi Saham' : 'Transaksi Beli / Jual Saham'}</h2>
+      <p class="desc">Catat pembelian atau penjualan saham berdasarkan kode sahamnya.</p>
+      <form id="form-transaction">
+        <div class="field-row">
+          <div class="field">
+            <label>Aksi</label>
+            <select id="t-type">
+              <option value="BELI" ${editingTx && editingTx.type==='BELI'?'selected':''}>BELI</option>
+              <option value="JUAL" ${editingTx && editingTx.type==='JUAL'?'selected':''}>JUAL</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Kode Saham</label>
+            <input type="text" id="t-kode" placeholder="BBCA" value="${editingTx?editingTx.kode:''}" style="text-transform:uppercase;" required>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Tanggal</label>
+            <input type="date" id="t-date" value="${editingTx?editingTx.date:''}" required>
+          </div>
+          <div class="field">
+            <label>Jumlah (Lot)</label>
+            <input type="number" id="t-lot" placeholder="10" min="0.01" step="any" value="${editingTx?(editingTx.lembar/100):''}" required>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Harga per Lembar (Rp)</label>
+            <input type="number" id="t-harga" placeholder="8500" min="1" value="${editingTx?editingTx.harga:''}" required>
+          </div>
+          <div class="field">
+            <label>Total Transaksi (Rp)</label>
+            <input type="number" id="t-total" placeholder="8500000" readonly style="background:#eef0ea;cursor:not-allowed;">
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Catatan (Opsional)</label>
+          <input type="text" id="t-catatan" placeholder="Misal: Beli saat MoS 35%" value="${editingTx?(editingTx.catatan||''):''}">
+        </div>
+
+        <div class="btn-row">
+          <button type="submit" class="primary">${editingTx?'Simpan Transaksi':'Catat Transaksi'}</button>
+          ${editingTx?'<button type="button" class="secondary" id="cancel-tx-edit">Batal</button>':''}
+        </div>
+      </form>
+    </div>
+
+    <!-- HOLDINGS (KUMPULAN SAHAM YANG DIMILIKI) -->
+    <div class="card">
+      <h2>Kepemilikan Saham (Holdings)</h2>
+      <p class="desc">Dihitung otomatis dari akumulasi riwayat transaksi beli/jual.</p>
+      ${holdings.length ? `
+      <div class="scroll-x">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Kode</th>
+            <th>Jumlah Lot</th>
+            <th>Avg Price</th>
+            <th>Harga Saat Ini</th>
+            <th>Modal Usaha</th>
+            <th>Nilai Pasar</th>
+            <th>Unrealized P/L</th>
+          </tr>
+        </thead>
+        <tbody>
+        ${holdings.map(h=>`
+          <tr>
+            <td><strong>${h.kode}</strong></td>
+            <td>${h.lot.toLocaleString('id-ID')} Lot</td>
+            <td>${fmtRp(h.avgPrice)}</td>
+            <td>${fmtRp(h.currPrice)}</td>
+            <td>${fmtRp(h.totalCost)}</td>
+            <td>${fmtRp(h.marketVal)}</td>
+            <td style="color:${h.floatingPL>=0?'var(--gain)':'var(--loss)'}">
+              ${fmtRp(h.floatingPL)}<br>
+              <span style="font-size:10px;">(${fmtPct(h.floatingPct)})</span>
+            </td>
+          </tr>
+        `).join('')}
+        </tbody>
+      </table>
+      </div>
+      ` : `<div class="empty">Belum ada posisi saham aktif.</div>`}
+    </div>
+
+    <!-- RIWAYAT TRANSAKSI SAHAM -->
+    <div class="card">
+      <h2>Riwayat Transaksi Saham</h2>
+      ${transactions.length ? `
+      <div class="scroll-x">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Tanggal</th>
+            <th>Aksi</th>
+            <th>Kode</th>
+            <th>Lot</th>
+            <th>Harga</th>
+            <th>Total</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+        ${[...transactions].reverse().map(t=>`
+          <tr>
+            <td>${fmtDate(t.date)}</td>
+            <td><span class="pill ${t.type==='BELI'?'gain':'loss'}">${t.type}</span></td>
+            <td><strong>${t.kode}</strong></td>
+            <td>${(t.lembar/100).toLocaleString('id-ID')} Lot</td>
+            <td>${fmtRp(t.harga)}</td>
+            <td>${fmtRp(t.total)}</td>
+            <td>
+              <span class="edit-btn" onclick="startTxEdit('${t.id}')">Ubah</span>
+              <span class="delete-btn" onclick="deleteTxEntry('${t.id}')">Hapus</span>
+            </td>
+          </tr>
+        `).join('')}
+        </tbody>
+      </table>
+      </div>
+      ` : `<div class="empty">Belum ada riwayat transaksi saham.</div>`}
+    </div>
+
+    <!-- REKAP EQUITY & NAB BULANAN (Sama Seperti Kode Asli) -->
+    <div class="card">
+      <h2>${editing ? 'Ubah entri NAB' : (rows.length===0 ? 'Setoran awal' : 'Tambah entri bulanan NAB')}</h2>
       <p class="desc">${rows.length===0 ? 'Entri pertama menjadi baseline (NAB = 1000).' : 'Isi tanggal, dana masuk/keluar, nilai equity aktual (dari broker), dan level IHSG.'}</p>
       <form id="form-entry">
         <div class="field">
@@ -614,11 +824,10 @@ function renderData(){
           ${editing?'<button type="button" class="secondary" id="cancel-edit">Batal</button>':''}
         </div>
       </form>
-      <p class="note">Dana negatif berarti penarikan dana. Isi minus di depan angka, misal -50000. Dividen cukup untuk dicatat/dipantau — jika kas dividen masih mengendap di akun, nilainya otomatis sudah ikut terhitung di kolom Equity, jadi tidak perlu dimasukkan lagi ke kolom Dana. Kalau dividen ditarik keluar dari akun, catat penarikannya di kolom Dana (minus). Data tersimpan otomatis di perangkat ini setiap kali ditambah/diubah.</p>
     </div>
 
     <div class="card">
-      <h2>Riwayat lengkap</h2>
+      <h2>Riwayat NAB &amp; Performa Portofolio</h2>
       ${computed.length ? `
       <div class="scroll-x">
       <table class="data-table">
@@ -643,10 +852,57 @@ function renderData(){
         </tbody>
       </table>
       </div>
-      ` : `<div class="empty">Belum ada entri.</div>`}
+      ` : `<div class="empty">Belum ada entri NAB.</div>`}
     </div>
   `;
 
+  // Autocalculate total transaksi saham
+  const lotInp = document.getElementById('t-lot');
+  const hrgInp = document.getElementById('t-harga');
+  const totInp = document.getElementById('t-total');
+
+  function calcTotal(){
+    const l = parseFloat(lotInp.value) || 0;
+    const h = parseFloat(hrgInp.value) || 0;
+    totInp.value = Math.round(l * 100 * h);
+  }
+  if(lotInp && hrgInp){
+    lotInp.addEventListener('input', calcTotal);
+    hrgInp.addEventListener('input', calcTotal);
+    calcTotal();
+  }
+
+  // Handle Submit Transaksi Saham
+  document.getElementById('form-transaction').addEventListener('submit', e=>{
+    e.preventDefault();
+    const type = document.getElementById('t-type').value;
+    const kode = document.getElementById('t-kode').value.toUpperCase().trim();
+    const date = document.getElementById('t-date').value;
+    const lot = parseFloat(document.getElementById('t-lot').value) || 0;
+    const harga = parseFloat(document.getElementById('t-harga').value) || 0;
+    const catatan = document.getElementById('t-catatan').value.trim();
+
+    if(!kode || !date || lot<=0 || harga<=0) return;
+
+    const lembar = lot * 100;
+    const total = lembar * harga;
+
+    if(editingTxId){
+      const idx = transactions.findIndex(t=>t.id===editingTxId);
+      transactions[idx] = { id: editingTxId, date, type, kode, lembar, harga, total, catatan };
+      editingTxId = null;
+    } else {
+      transactions.push({ id:'tx_'+Date.now(), date, type, kode, lembar, harga, total, catatan });
+    }
+
+    saveTransactions();
+    renderAll();
+  });
+
+  const cancelTxBtn = document.getElementById('cancel-tx-edit');
+  if(cancelTxBtn) cancelTxBtn.addEventListener('click', ()=>{ editingTxId = null; renderData(); });
+
+  // Handle Form Entry NAB Bulanan
   document.getElementById('form-entry').addEventListener('submit', e=>{
     e.preventDefault();
     const date = document.getElementById('f-date').value;
@@ -654,7 +910,9 @@ function renderData(){
     const dividen = parseFloat(document.getElementById('f-dividen').value)||0;
     const equity = parseFloat(document.getElementById('f-equity').value);
     const ihsg = parseFloat(document.getElementById('f-ihsg').value);
+
     if(!date || isNaN(equity) || isNaN(ihsg)) return;
+
     if(editingId){
       const idx = rows.findIndex(r=>r.id===editingId);
       rows[idx] = {...rows[idx], date, dana, dividen, equity, ihsg};
@@ -662,158 +920,264 @@ function renderData(){
     } else {
       rows.push({id:'e_'+Date.now(), date, dana, dividen, equity, ihsg});
     }
+
     saveData();
     renderAll();
   });
+
   const cancelBtn = document.getElementById('cancel-edit');
-  if(cancelBtn) cancelBtn.addEventListener('click', ()=>{ editingId=null; renderAll(); });
+  if(cancelBtn) cancelBtn.addEventListener('click', ()=>{ editingId = null; renderData(); });
 }
 
-function startEdit(id){ editingId = id; renderAll(); document.getElementById('view-data').scrollIntoView({behavior:'smooth'}); }
-function deleteEntry(id){ rows = rows.filter(r=>r.id!==id); saveData(); renderAll(); }
+function startEdit(id){ editingId = id; renderData(); }
+function deleteEntry(id){
+  if(confirm('Hapus entri NAB ini?')){
+    rows = rows.filter(r=>r.id!==id);
+    saveData();
+    renderAll();
+  }
+}
 
-// ---------- render watchlist ----------
+function startTxEdit(id){ editingTxId = id; renderData(); }
+function deleteTxEntry(id){
+  if(confirm('Hapus transaksi ini?')){
+    transactions = transactions.filter(t=>t.id!==id);
+    saveTransactions();
+    renderAll();
+  }
+}
+
+// ---------- Render Watchlist ----------
 function renderWatchlist(){
   const el = document.getElementById('view-watchlist');
   const editing = editingWatchId ? watchlist.find(w=>w.id===editingWatchId) : null;
-  const totalBeli = watchlist.filter(w=>w.status==='Beli').length;
 
   el.innerHTML = `
     <div class="card">
-      <h2>${editing ? 'Ubah saham' : 'Tambah ke watchlist'}</h2>
-      <p class="desc">Kode pakai kode IDX (mis. BBCA, TLKM) — otomatis dicari sebagai {KODE}.JK di Yahoo Finance. EPS &amp; mean PE 5 tahun isi manual, idealnya diperbarui tiap ada laporan keuangan kuartalan baru.</p>
-      <form id="form-watch">
+      <h2>${editing ? 'Ubah Saham Watchlist' : 'Tambah Saham ke Watchlist'}</h2>
+      <p class="desc">Hitung Harga Wajar (EPS × Mean PE) &amp; Margin of Safety secara otomatis.</p>
+      <form id="form-watchlist">
         <div class="field-row">
           <div class="field">
-            <label>Kode Saham (IDX)</label>
-            <input type="text" id="w-kode" placeholder="BBCA" value="${editing?editing.kode:''}" required>
+            <label>Kode Saham (e.g. BBCA)</label>
+            <input type="text" id="w-kode" placeholder="BBCA" value="${editing?editing.kode:''}" style="text-transform:uppercase" required>
           </div>
           <div class="field">
-            <label>Nama (opsional)</label>
-            <input type="text" id="w-nama" placeholder="Bank BCA" value="${editing?(editing.nama||''):''}">
+            <label>Nama Perusahaan (opsional)</label>
+            <input type="text" id="w-nama" placeholder="Bank Central Asia" value="${editing?editing.nama:''}">
           </div>
         </div>
         <div class="field-row">
           <div class="field">
             <label>EPS (Rp)</label>
-            <input type="number" id="w-eps" placeholder="350" step="0.01" value="${editing?editing.eps:''}" required>
+            <input type="number" id="w-eps" placeholder="400" value="${editing?editing.eps:''}" step="0.01" required>
           </div>
           <div class="field">
-            <label>Mean PE Band 5 Tahun</label>
-            <input type="number" id="w-pe" placeholder="18.5" step="0.01" value="${editing?editing.peMean:''}" required>
+            <label>Mean PE (x)</label>
+            <input type="number" id="w-pe" placeholder="15" value="${editing?editing.peMean:''}" step="0.01" required>
+          </div>
+          <div class="field">
+            <label>Harga Saat Ini (Rp)</label>
+            <input type="number" id="w-price" placeholder="8500" value="${editing?editing.price:''}" step="1">
           </div>
         </div>
         <div class="btn-row">
-          <button type="submit" class="primary">${editing?'Simpan perubahan':'Tambah ke watchlist'}</button>
-          ${editing?'<button type="button" class="secondary" id="cancel-edit-watch">Batal</button>':''}
+          <button type="submit" class="primary">${editing?'Simpan Perubahan':'Tambah Saham'}</button>
+          ${editing?'<button type="button" class="secondary" id="cancel-watch-edit">Batal</button>':''}
         </div>
       </form>
-      <p class="note">Harga Wajar = EPS × Mean PE 5 Tahun. MOS = (Harga Wajar − Price) ÷ Harga Wajar. Status "Beli" kalau MOS ≥ 30%, selain itu "Mahal". Action "Jual" kalau Price ≥ Harga Wajar, selain itu "Hold".</p>
     </div>
 
     <div class="card">
-      <h2>Daftar watchlist</h2>
-      <p class="desc">${watchlist.length} saham dipantau &middot; ${totalBeli} sinyal Beli saat ini.</p>
-      <div class="btn-row" style="margin-bottom:12px;">
-        <button class="secondary" id="refresh-prices">Refresh Harga (Yahoo Finance)</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div>
+          <h2 style="margin:0;">Daftar Pantau</h2>
+          <p class="desc" style="margin:0;">Kriteria Beli jika Margin of Safety (MoS) &ge; 30%.</p>
+        </div>
+        <button class="secondary" id="btn-refresh-price" style="padding:6px 12px;font-size:12px;">🔄 Update Harga</button>
       </div>
+
       ${watchlist.length ? `
       <div class="scroll-x">
       <table class="data-table">
-        <thead><tr>
-          <th>Kode</th><th>Price</th><th>Harga Wajar</th><th>MOS</th><th>Status</th><th>Action</th><th></th>
-        </tr></thead>
-        <tbody>
-        ${[...watchlist].sort((a,b)=>b.mos-a.mos).map(w=>`
+        <thead>
           <tr>
-            <td style="text-align:left;">
-              <div style="font-weight:600;">${w.kode}</div>
-              ${w.nama?`<div class="meta" style="font-size:10.5px;">${w.nama}</div>`:''}
-            </td>
-            <td>${w.price ? fmtRp(w.price) : '—'}</td>
-            <td>${fmtRp(w.hargaWajar)}</td>
-            <td style="color:${w.mos>=0?'var(--gain)':'var(--loss)'}">${fmtPct(w.mos)}</td>
-            <td><span class="pill ${w.status==='Beli'?'gain':'loss'}">${w.status}</span></td>
-            <td><span class="pill ${w.action==='Jual'?'loss':'gain'}">${w.action}</span></td>
-            <td><span class="edit-btn" onclick="startEditWatch('${w.id}')">Ubah</span><span class="delete-btn" onclick="deleteWatch('${w.id}')">Hapus</span></td>
+            <th>Kode</th>
+            <th>EPS</th>
+            <th>PE Mean</th>
+            <th>Harga Wajar</th>
+            <th>Harga</th>
+            <th>MoS</th>
+            <th>Status</th>
+            <th>Aksi</th>
+            <th></th>
           </tr>
-        `).join('')}
+        </thead>
+        <tbody>
+        ${watchlist.map(w=>{
+          const computed = computeWatchlistRowLocal(w);
+          return `
+            <tr>
+              <td><strong>${computed.kode}</strong><br><span style="font-size:10px;color:var(--ink-muted);">${computed.nama}</span></td>
+              <td>${computed.eps}</td>
+              <td>${computed.peMean}x</td>
+              <td><strong>${fmtRp(computed.hargaWajar)}</strong></td>
+              <td>${computed.price ? fmtRp(computed.price) : '—'}</td>
+              <td style="color:${computed.mos>=0.3?'var(--gain)':'var(--loss)'}">${fmtPct(computed.mos)}</td>
+              <td><span class="pill ${computed.status==='Beli'?'gain':'loss'}">${computed.status}</span></td>
+              <td><span class="pill ${computed.action==='Jual'?'loss':'gain'}">${computed.action}</span></td>
+              <td>
+                <span class="edit-btn" onclick="startWatchEdit('${computed.id}')">Ubah</span>
+                <span class="delete-btn" onclick="deleteWatchItem('${computed.id}')">Hapus</span>
+              </td>
+            </tr>
+          `;
+        }).join('')}
         </tbody>
       </table>
       </div>
-      <p class="note">Terakhir update harga: ${watchlist.some(w=>w.updatedAt) ? fmtDate((watchlist.find(w=>w.updatedAt)||{}).updatedAt.slice(0,10)) : 'belum pernah'}. Diperbarui otomatis tiap awal kuartal (Jan/Apr/Jul/Okt) lewat trigger Apps Script, atau kapan saja lewat tombol Refresh di atas.</p>
-      ` : `<div class="empty">Belum ada saham di watchlist.</div>`}
+      ` : `<div class="empty">Watchlist masih kosong.</div>`}
     </div>
   `;
 
-  document.getElementById('form-watch').addEventListener('submit', e=>{
+  document.getElementById('form-watchlist').addEventListener('submit', e=>{
     e.preventDefault();
-    const kode = document.getElementById('w-kode').value.trim().toUpperCase();
+    const kode = document.getElementById('w-kode').value.toUpperCase().trim();
     const nama = document.getElementById('w-nama').value.trim();
-    const eps = parseFloat(document.getElementById('w-eps').value);
-    const peMean = parseFloat(document.getElementById('w-pe').value);
-    if(!kode || isNaN(eps) || isNaN(peMean)) return;
+    const eps = parseFloat(document.getElementById('w-eps').value)||0;
+    const peMean = parseFloat(document.getElementById('w-pe').value)||0;
+    const price = parseFloat(document.getElementById('w-price').value)||0;
+
+    if(!kode || !eps || !peMean) return;
+
     if(editingWatchId){
       const idx = watchlist.findIndex(w=>w.id===editingWatchId);
-      watchlist[idx] = {...watchlist[idx], kode, nama, eps, peMean};
+      watchlist[idx] = computeWatchlistRowLocal({...watchlist[idx], kode, nama, eps, peMean, price});
       editingWatchId = null;
     } else {
-      watchlist.push({id:'w_'+Date.now(), kode, nama, eps, peMean, price:0, updatedAt:''});
+      watchlist.push(computeWatchlistRowLocal({
+        id:'w_'+Date.now(), kode, nama, eps, peMean, price, updatedAt: new Date().toISOString()
+      }));
     }
-    saveWatchlist().then(renderAll);
+    saveWatchlist();
     renderAll();
   });
-  const cancelBtn = document.getElementById('cancel-edit-watch');
-  if(cancelBtn) cancelBtn.addEventListener('click', ()=>{ editingWatchId=null; renderAll(); });
-  document.getElementById('refresh-prices').addEventListener('click', refreshPrices);
-}
-function startEditWatch(id){ editingWatchId = id; renderAll(); document.getElementById('view-watchlist').scrollIntoView({behavior:'smooth'}); }
-function deleteWatch(id){ watchlist = watchlist.filter(w=>w.id!==id); saveWatchlist().then(renderAll); renderAll(); }
 
-// ---------- render pengaturan ----------
+  const cancelBtn = document.getElementById('cancel-watch-edit');
+  if(cancelBtn) cancelBtn.addEventListener('click', ()=>{ editingWatchId = null; renderWatchlist(); });
+
+  const btnRefresh = document.getElementById('btn-refresh-price');
+  if(btnRefresh) btnRefresh.addEventListener('click', refreshPrices);
+}
+
+function startWatchEdit(id){ editingWatchId = id; renderWatchlist(); }
+function deleteWatchItem(id){
+  if(confirm('Hapus saham ini dari watchlist?')){
+    watchlist = watchlist.filter(w=>w.id!==id);
+    saveWatchlist();
+    renderAll();
+  }
+}
+
+// ---------- Render Pengaturan ----------
 function renderPengaturan(){
   const el = document.getElementById('view-pengaturan');
+  const currentUrl = getScriptUrl();
+
   el.innerHTML = `
     <div class="card">
-      <h2>Database (Google Sheets)</h2>
-      <p class="desc">${syncStatus.connected ? 'Data disinkronkan ke Google Sheets lewat Apps Script — semua perangkat yang membuka aplikasi ini dengan URL yang sama akan melihat data yang sama.' : 'Belum tersambung ke Google Sheets. Tempel URL Web App Apps Script Anda di bawah supaya data (Portofolio &amp; Watchlist) tersimpan terpusat, bukan hanya di perangkat ini.'}</p>
-      <form id="form-script-url">
+      <h2>Koneksi Database (Google Sheets)</h2>
+      <p class="desc">Masukkan URL Web App Google Apps Script untuk menyinkronkan data portofolio dan watchlist antar perangkat.</p>
+      <form id="form-config">
         <div class="field">
-          <label>URL Web App Apps Script</label>
-          <input type="url" id="f-script-url" placeholder="https://script.google.com/macros/s/xxx/exec" value="${(localStorage.getItem('apps-script-url')||'')}">
+          <label>Web App URL (Google Apps Script)</label>
+          <input type="url" id="cfg-script-url" placeholder="https://script.google.com/macros/s/.../exec" value="${currentUrl}">
         </div>
-        <button type="submit" class="primary">Sambungkan</button>
+        <div class="btn-row">
+          <button type="submit" class="primary">Simpan &amp; Tes Koneksi</button>
+        </div>
       </form>
-      <p class="status" id="sync-status" style="margin-top:8px;color:${syncStatus.state==='error'?'var(--loss)':(syncStatus.connected?'var(--gain)':'var(--ink-muted)')}">${syncStatus.message}</p>
+      <div id="sync-status" style="font-size:12px;margin-top:12px;font-weight:500;"></div>
+    </div>
+
+    <div class="card">
+      <h2>Backup &amp; Restore Lokal</h2>
+      <p class="desc">Ekspor data ke file JSON atau impor dari cadangan lokal Anda.</p>
+      <div class="btn-row">
+        <button class="secondary" id="btn-export">Ekspor JSON</button>
+        <label class="secondary filebtn">
+          Impor JSON
+          <input type="file" id="file-import" accept=".json">
+        </label>
+      </div>
     </div>
   `;
-  document.getElementById('form-script-url').addEventListener('submit', async e=>{
+
+  renderSyncStatus();
+
+  document.getElementById('form-config').addEventListener('submit', async e=>{
     e.preventDefault();
-    const url = document.getElementById('f-script-url').value.trim();
+    const url = document.getElementById('cfg-script-url').value.trim();
     setScriptUrl(url);
     await loadData();
   });
+
+  document.getElementById('btn-export').addEventListener('click', ()=>{
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({rows, watchlist, transactions}, null, 2));
+    const dlAnchor = document.createElement('a');
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", `backup_saham_${new Date().toISOString().slice(0,10)}.json`);
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+  });
+
+  document.getElementById('file-import').addEventListener('change', e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = async event=>{
+      try{
+        const imported = JSON.parse(event.target.result);
+        if(Array.isArray(imported.rows)) rows = imported.rows;
+        if(Array.isArray(imported.watchlist)) watchlist = imported.watchlist;
+        if(Array.isArray(imported.transactions)) transactions = imported.transactions;
+
+        await saveData();
+        await saveWatchlist();
+        await saveTransactions();
+        renderAll();
+        alert('Data berhasil diimpor!');
+      }catch(err){
+        alert('File JSON tidak valid!');
+      }
+    };
+    reader.readAsText(file);
+  });
 }
 
+// ---------- RENDER CONTROLLER ----------
 function renderAll(){
-  if(!loaded) return;
   renderRingkasan();
   renderData();
   renderWatchlist();
   renderPengaturan();
 }
 
-document.querySelectorAll('.tab').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
+// ---------- TAB NAVIGATION ----------
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>{
     document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('view-'+btn.dataset.tab).classList.add('active');
+    t.classList.add('active');
+    document.getElementById('view-' + t.dataset.tab).classList.add('active');
   });
 });
 
-document.getElementById('app-version').textContent = `Tracking Saham ${APP_VERSION} · build ${APP_BUILD}`;
-loadData();
+// ---------- INITIALIZATION ----------
+window.addEventListener('DOMContentLoaded', ()=>{
+  loadData();
+});
 </script>
 </body>
 </html>
