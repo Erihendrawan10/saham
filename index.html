@@ -4,39 +4,39 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tracking Kinerja Saham</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+  [v-cloak] { display: none !important; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 
-  [v-cloak]{ display:none; }
   *{ box-sizing:border-box; }
   html,body{ margin:0; }
   body{
-    font-family:'Inter',sans-serif;
-    color:#F1F5F4;
+    color:#1E293B;
     background:
-      radial-gradient(circle at 15% 0%, rgba(52,211,153,.18), transparent 45%),
-      radial-gradient(circle at 100% 20%, rgba(45,212,191,.12), transparent 40%),
-      linear-gradient(180deg, #0A100D 0%, #0B1512 45%, #0A0F0D 100%);
+      radial-gradient(circle at 15% 0%, rgba(52,211,153,.12), transparent 45%),
+      radial-gradient(circle at 100% 20%, rgba(45,212,191,.08), transparent 40%),
+      linear-gradient(180deg, #F8FAF9 0%, #F1F5F4 45%, #F8FAF9 100%);
     min-height:100vh;
     -webkit-font-smoothing:antialiased;
   }
-  .font-display{ font-family:'Sora',sans-serif; }
+  .font-display{ font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 
   /* ---- komponen kustom (efek "2026": glass + gradient + glow) ---- */
   .glass-card{
-    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    background: rgba(255,255,255,.85);
     -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
-    border: 1px solid rgba(255,255,255,.09);
+    border: 1px solid rgba(15,23,42,.07);
     border-radius: 1.5rem;
-    box-shadow: 0 20px 45px -20px rgba(0,0,0,.6);
+    box-shadow: 0 20px 45px -25px rgba(15,23,42,.18);
   }
   .hero-card{
     position:relative; overflow:hidden; border-radius:1.75rem; padding:22px 20px;
     background: linear-gradient(135deg, #10B981 0%, #0D9488 55%, #065F5B 100%);
-    box-shadow: 0 25px 60px -18px rgba(16,185,129,.45);
+    box-shadow: 0 25px 60px -18px rgba(16,185,129,.35);
   }
   .hero-glow{
     position:absolute; width:220px; height:220px; border-radius:9999px;
@@ -44,44 +44,55 @@
     top:-90px; right:-70px; filter: blur(4px); opacity:.6; pointer-events:none;
   }
   .input-field{
-    width:100%; padding:.62rem .8rem; font-size:14px; color:#F1F5F4;
-    background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12);
+    width:100%; padding:.62rem .8rem; font-size:14px; color:#1E293B;
+    background: rgba(255,255,255,.9); border:1px solid rgba(15,23,42,.14);
     border-radius:.9rem; transition: border-color .15s, background .15s;
   }
-  .input-field::placeholder{ color: rgba(241,245,244,.35); }
-  .input-field:focus{ outline:none; border-color:#34D399; background: rgba(255,255,255,.08); }
+  .input-field::placeholder{ color: rgba(30,41,59,.4); }
+  .input-field:focus{ outline:none; border-color:#10B981; background:#FFFFFF; }
   .btn-primary{
     background: linear-gradient(135deg,#34D399,#0D9488);
     color:#052E27; font-weight:700; font-size:14px; padding:.68rem; border:none; border-radius:.9rem;
-    cursor:pointer; box-shadow: 0 10px 24px -8px rgba(16,185,129,.55);
+    cursor:pointer; box-shadow: 0 10px 24px -8px rgba(16,185,129,.4);
     transition: transform .12s ease;
   }
   .btn-primary:active{ transform: scale(.97); }
   .btn-secondary{
-    background: rgba(255,255,255,.05); color:#E2E8E6; border:1px solid rgba(255,255,255,.14);
+    background: rgba(15,23,42,.04); color:#334155; border:1px solid rgba(15,23,42,.12);
     font-weight:600; font-size:13px; padding:.62rem; border-radius:.9rem; cursor:pointer;
     transition: background .15s;
   }
-  .btn-secondary:hover{ background: rgba(255,255,255,.09); }
+  .btn-secondary:hover{ background: rgba(15,23,42,.08); }
   .pill{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:9999px; display:inline-flex; align-items:center; gap:4px; }
-  .pill-gain{ background: rgba(52,211,153,.14); color:#34D399; }
-  .pill-loss{ background: rgba(251,113,133,.14); color:#FB7185; }
-  .pill-amber{ background: rgba(251,191,36,.14); color:#FBBF24; }
-  .pill-slate{ background: rgba(148,163,184,.14); color:#CBD5E1; }
+  .pill-gain{ background: rgba(16,185,129,.12); color:#0D9488; }
+  .pill-loss{ background: rgba(244,63,94,.12); color:#E11D48; }
+  .pill-amber{ background: rgba(245,158,11,.14); color:#B45309; }
+  .pill-slate{ background: rgba(100,116,139,.12); color:#475569; }
   .dot{ width:8px; height:8px; border-radius:9999px; display:inline-block; }
   .tab-btn{ transition: all .18s ease; }
   .scrollbar-thin::-webkit-scrollbar{ height:6px; }
-  .scrollbar-thin::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.15); border-radius:9999px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb{ background: rgba(15,23,42,.15); border-radius:9999px; }
 </style>
 </head>
 <body>
-<div id="app" v-cloak class="max-w-lg mx-auto px-4 pt-7 pb-28">
+<div id="app" v-cloak class="max-w-lg lg:max-w-5xl mx-auto px-4 md:px-8 pt-7 pb-28 lg:pb-12">
 
   <!-- ================= HEADER ================= -->
-  <div class="text-center mb-6">
-    <h1 class="font-display font-extrabold text-2xl tracking-tight bg-clip-text text-transparent" style="background-image:linear-gradient(135deg,#6EE7B7,#2DD4BF,#34D399); -webkit-background-clip:text;">
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between text-center lg:text-left mb-6 gap-4">
+    <h1 class="font-display font-extrabold text-2xl tracking-tight bg-clip-text text-transparent" style="background-image:linear-gradient(135deg,#059669,#0D9488,#10B981); -webkit-background-clip:text;">
       📈 Tracking Kinerja Saham
     </h1>
+    <!-- Desktop nav -->
+    <div class="hidden lg:flex gap-1 p-1.5 rounded-2xl glass-card">
+      <button v-for="t in tabs" :key="t.id" @click="activeTab=t.id"
+        class="tab-btn flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold"
+        :style="activeTab===t.id
+          ? 'background:linear-gradient(135deg,#34D399,#0D9488); color:#052E27; box-shadow:0 8px 18px -6px rgba(16,185,129,.35);'
+          : 'color:#64748B;'">
+        <span class="text-base leading-none">{{ t.emoji }}</span>
+        <span>{{ t.label }}</span>
+      </button>
+    </div>
   </div>
 
   <!-- ================= TAB: RINGKASAN ================= -->
@@ -134,7 +145,7 @@
         <div>
           <p class="text-[11px] text-slate-400">💎 Total Dividen Diterima</p>
           <p class="text-[11px] text-slate-500 -mt-0.5">sepanjang waktu</p>
-          <p class="font-display text-xl font-bold text-amber-400 mt-1.5">{{ fmtRp(totalDividenAllTime) }}</p>
+          <p class="font-display text-xl font-bold text-amber-600 mt-1.5">{{ fmtRp(totalDividenAllTime) }}</p>
         </div>
         <div class="text-4xl opacity-80">🪙</div>
       </div>
@@ -150,23 +161,23 @@
 
       <!-- Perbandingan tahun -->
       <div v-if="yearStats" class="glass-card p-4">
-        <h2 class="font-display font-bold text-white mb-1">⚔️ Performa {{ yearFilter }}</h2>
+        <h2 class="font-display font-bold text-slate-800 mb-1">⚔️ Performa {{ yearFilter }}</h2>
         <p class="text-xs text-slate-400 mb-3">Dibandingkan dengan tahun {{ parseInt(yearFilter)-1 }}{{ prevYearStats ? '' : ' (tidak ada data)' }}.</p>
-        <div class="grid grid-cols-2 rounded-2xl overflow-hidden border border-white/10">
+        <div class="grid grid-cols-2 rounded-2xl overflow-hidden border border-slate-200">
           <div class="p-3" style="background:rgba(52,211,153,.08);">
-            <p class="text-[11px] text-slate-300 font-bold mb-2">{{ yearFilter }}</p>
+            <p class="text-[11px] text-slate-600 font-bold mb-2">{{ yearFilter }}</p>
             <div class="flex justify-between text-xs py-1"><span class="text-slate-400">Return NAB</span><span class="font-semibold" :class="pctColor(yearStats.nabReturn)">{{ fmtPct(yearStats.nabReturn) }}</span></div>
             <div class="flex justify-between text-xs py-1"><span class="text-slate-400">Return IHSG</span><span class="font-semibold" :class="pctColor(yearStats.ihsgReturn)">{{ fmtPct(yearStats.ihsgReturn) }}</span></div>
-            <div class="flex justify-between text-xs py-1"><span class="text-slate-400">💵 Setoran</span><span class="font-semibold text-white">{{ fmtRp(yearStats.totalDana) }}</span></div>
-            <div class="flex justify-between text-xs py-1"><span class="text-slate-400">💎 Dividen</span><span class="font-semibold text-white">{{ fmtRp(yearStats.totalDividen) }}</span></div>
+            <div class="flex justify-between text-xs py-1"><span class="text-slate-400">💵 Setoran</span><span class="font-semibold text-slate-800">{{ fmtRp(yearStats.totalDana) }}</span></div>
+            <div class="flex justify-between text-xs py-1"><span class="text-slate-400">💎 Dividen</span><span class="font-semibold text-slate-800">{{ fmtRp(yearStats.totalDividen) }}</span></div>
           </div>
-          <div class="p-3" style="background:rgba(255,255,255,.02);">
-            <p class="text-[11px] text-slate-300 font-bold mb-2">{{ parseInt(yearFilter)-1 }}</p>
+          <div class="p-3" style="background:rgba(15,23,42,.03);">
+            <p class="text-[11px] text-slate-600 font-bold mb-2">{{ parseInt(yearFilter)-1 }}</p>
             <template v-if="prevYearStats">
               <div class="flex justify-between text-xs py-1"><span class="text-slate-400">Return NAB</span><span class="font-semibold" :class="pctColor(prevYearStats.nabReturn)">{{ fmtPct(prevYearStats.nabReturn) }}</span></div>
               <div class="flex justify-between text-xs py-1"><span class="text-slate-400">Return IHSG</span><span class="font-semibold" :class="pctColor(prevYearStats.ihsgReturn)">{{ fmtPct(prevYearStats.ihsgReturn) }}</span></div>
-              <div class="flex justify-between text-xs py-1"><span class="text-slate-400">💵 Setoran</span><span class="font-semibold text-white">{{ fmtRp(prevYearStats.totalDana) }}</span></div>
-              <div class="flex justify-between text-xs py-1"><span class="text-slate-400">💎 Dividen</span><span class="font-semibold text-white">{{ fmtRp(prevYearStats.totalDividen) }}</span></div>
+              <div class="flex justify-between text-xs py-1"><span class="text-slate-400">💵 Setoran</span><span class="font-semibold text-slate-800">{{ fmtRp(prevYearStats.totalDana) }}</span></div>
+              <div class="flex justify-between text-xs py-1"><span class="text-slate-400">💎 Dividen</span><span class="font-semibold text-slate-800">{{ fmtRp(prevYearStats.totalDividen) }}</span></div>
             </template>
             <p v-else class="text-xs text-slate-500">Belum ada data.</p>
           </div>
@@ -175,7 +186,7 @@
 
       <!-- Chart -->
       <div class="glass-card p-4">
-        <h2 class="font-display font-bold text-white mb-1">📈 NAB vs IHSG (rebased ke 1000)</h2>
+        <h2 class="font-display font-bold text-slate-800 mb-1">📈 NAB vs IHSG (rebased ke 1000)</h2>
         <p class="text-xs text-slate-400 mb-3">Membandingkan kinerja murni investasi Anda terhadap IHSG, tidak terpengaruh besar/kecilnya setoran.</p>
         <div v-if="activeComputed.length>=2">
           <div v-html="chartSvg"></div>
@@ -189,11 +200,11 @@
 
       <!-- Kinerja bulanan -->
       <div class="glass-card p-4">
-        <h2 class="font-display font-bold text-white mb-3">🏆 Kinerja bulanan vs IHSG</h2>
+        <h2 class="font-display font-bold text-slate-800 mb-3">🏆 Kinerja bulanan vs IHSG</h2>
         <div v-if="monthlyPerf.length===0" class="text-center text-slate-500 text-sm py-4">Belum ada data bulanan.</div>
-        <div v-for="r in monthlyPerf" :key="r.id" class="flex justify-between items-center py-2.5 border-b border-white/5 last:border-0">
+        <div v-for="r in monthlyPerf" :key="r.id" class="flex justify-between items-center py-2.5 border-b border-slate-100 last:border-0">
           <div>
-            <div class="font-semibold text-sm text-white">{{ fmtMonth(r.date) }}</div>
+            <div class="font-semibold text-sm text-slate-800">{{ fmtMonth(r.date) }}</div>
             <div class="text-[11px] text-slate-400">NAB {{ fmtPct(r.nabPct) }} &middot; IHSG {{ fmtPct(r.ihsgPct) }}</div>
           </div>
           <span class="pill" :class="(r.nabPct-r.ihsgPct)>=0 ? 'pill-gain' : 'pill-loss'">
@@ -207,7 +218,7 @@
   <!-- ================= TAB: PORTOFOLIO ================= -->
   <div v-else-if="activeTab==='data'" class="space-y-4">
     <div class="glass-card p-4">
-      <h2 class="font-display font-bold text-white mb-1">{{ editingEntry ? '✏️ Ubah entri' : (rows.length===0 ? '🌱 Setoran awal' : '➕ Tambah entri bulan ini') }}</h2>
+      <h2 class="font-display font-bold text-slate-800 mb-1">{{ editingEntry ? '✏️ Ubah entri' : (rows.length===0 ? '🌱 Setoran awal' : '➕ Tambah entri bulan ini') }}</h2>
       <p class="text-xs text-slate-400 mb-3">{{ rows.length===0 ? 'Entri pertama menjadi baseline (NAB = 1000).' : 'Isi tanggal, dana masuk/keluar, nilai equity aktual (dari broker), dan level IHSG.' }}</p>
       <form @submit.prevent="submitEntry" class="space-y-3">
         <div>
@@ -243,7 +254,7 @@
     </div>
 
     <div class="glass-card p-4">
-      <h2 class="font-display font-bold text-white mb-3">📜 Riwayat lengkap</h2>
+      <h2 class="font-display font-bold text-slate-800 mb-3">📜 Riwayat lengkap</h2>
       <div v-if="computedRows.length" class="overflow-x-auto scrollbar-thin">
         <table class="w-full text-xs" style="min-width:640px;">
           <thead>
@@ -261,19 +272,19 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="r in reversedComputedRows" :key="r.id" class="border-t border-white/5">
-              <td class="py-2 text-slate-300">{{ fmtDate(r.date) }}</td>
-              <td class="py-2 text-right text-slate-300">{{ fmtRp(r.dana) }}</td>
-              <td class="py-2 text-right text-slate-300">{{ r.dividen ? fmtRp(r.dividen) : '—' }}</td>
-              <td class="py-2 text-right text-slate-300">{{ r.totalUnit.toFixed(2) }}</td>
-              <td class="py-2 text-right text-slate-300">{{ fmtRp(r.equity) }}</td>
-              <td class="py-2 text-right text-slate-300">{{ fmtRp(r.nab) }}</td>
+            <tr v-for="r in reversedComputedRows" :key="r.id" class="border-t border-slate-100">
+              <td class="py-2 text-slate-600">{{ fmtDate(r.date) }}</td>
+              <td class="py-2 text-right text-slate-600">{{ fmtRp(r.dana) }}</td>
+              <td class="py-2 text-right text-slate-600">{{ r.dividen ? fmtRp(r.dividen) : '—' }}</td>
+              <td class="py-2 text-right text-slate-600">{{ r.totalUnit.toFixed(2) }}</td>
+              <td class="py-2 text-right text-slate-600">{{ fmtRp(r.equity) }}</td>
+              <td class="py-2 text-right text-slate-600">{{ fmtRp(r.nab) }}</td>
               <td class="py-2 text-right font-medium" :class="pctColor(r.nabPct)">{{ fmtPct(r.nabPct) }}</td>
-              <td class="py-2 text-right text-slate-300">{{ r.ihsg }}</td>
+              <td class="py-2 text-right text-slate-600">{{ r.ihsg }}</td>
               <td class="py-2 text-right font-medium" :class="pctColor(r.ihsgPct)">{{ fmtPct(r.ihsgPct) }}</td>
               <td class="py-2 text-right whitespace-nowrap">
-                <button @click="startEdit(r.id)" class="text-emerald-400 text-[11px] underline mr-2">Ubah</button>
-                <button @click="deleteEntry(r.id)" class="text-rose-400 text-[11px] underline">Hapus</button>
+                <button @click="startEdit(r.id)" class="text-emerald-600 text-[11px] underline mr-2">Ubah</button>
+                <button @click="deleteEntry(r.id)" class="text-rose-600 text-[11px] underline">Hapus</button>
               </td>
             </tr>
           </tbody>
@@ -286,7 +297,7 @@
   <!-- ================= TAB: WATCHLIST ================= -->
   <div v-else-if="activeTab==='watchlist'" class="space-y-4">
     <div class="glass-card p-4">
-      <h2 class="font-display font-bold text-white mb-1">{{ editingWatch ? '✏️ Ubah saham' : '🎯 Tambah ke watchlist' }}</h2>
+      <h2 class="font-display font-bold text-slate-800 mb-1">{{ editingWatch ? '✏️ Ubah saham' : '🎯 Tambah ke watchlist' }}</h2>
       <p class="text-xs text-slate-400 mb-3">Kode pakai kode IDX (mis. BBCA, TLKM) — otomatis dicari sebagai {KODE}.JK di Yahoo Finance. EPS &amp; mean PE 5 tahun isi manual, idealnya diperbarui tiap ada laporan keuangan kuartalan baru.</p>
       <form @submit.prevent="submitWatch" class="space-y-3">
         <div class="flex gap-3">
@@ -318,7 +329,7 @@
     </div>
 
     <div class="glass-card p-4">
-      <h2 class="font-display font-bold text-white mb-1">👁️ Daftar watchlist</h2>
+      <h2 class="font-display font-bold text-slate-800 mb-1">👁️ Daftar watchlist</h2>
       <p class="text-xs text-slate-400 mb-3">{{ watchlist.length }} saham dipantau &middot; {{ totalBeli }} sinyal 🟢 Beli saat ini.</p>
       <button @click="refreshPrices" class="btn-secondary w-full mb-3">🔄 Refresh Harga (Yahoo Finance)</button>
 
@@ -336,13 +347,13 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="w in sortedWatchlist" :key="w.id" class="border-t border-white/5">
+            <tr v-for="w in sortedWatchlist" :key="w.id" class="border-t border-slate-100">
               <td class="py-2">
-                <div class="font-semibold text-white">{{ w.kode }}</div>
+                <div class="font-semibold text-slate-800">{{ w.kode }}</div>
                 <div v-if="w.nama" class="text-[10px] text-slate-500">{{ w.nama }}</div>
               </td>
-              <td class="py-2 text-right text-slate-300">{{ w.price ? fmtRp(w.price) : '—' }}</td>
-              <td class="py-2 text-right text-slate-300">{{ fmtRp(w.hargaWajar) }}</td>
+              <td class="py-2 text-right text-slate-600">{{ w.price ? fmtRp(w.price) : '—' }}</td>
+              <td class="py-2 text-right text-slate-600">{{ fmtRp(w.hargaWajar) }}</td>
               <td class="py-2 text-right font-medium" :class="pctColor(w.mos)">{{ fmtPct(w.mos) }}</td>
               <td class="py-2 text-center">
                 <span class="pill" :class="w.status==='Beli' ? 'pill-gain' : 'pill-loss'">{{ w.status==='Beli' ? '🟢' : '🔴' }} {{ w.status }}</span>
@@ -351,8 +362,8 @@
                 <span class="pill" :class="w.action==='Jual' ? 'pill-amber' : 'pill-slate'">{{ w.action==='Jual' ? '🔔' : '✋' }} {{ w.action }}</span>
               </td>
               <td class="py-2 text-right whitespace-nowrap">
-                <button @click="startEditWatch(w.id)" class="text-emerald-400 text-[11px] underline mr-2">Ubah</button>
-                <button @click="deleteWatch(w.id)" class="text-rose-400 text-[11px] underline">Hapus</button>
+                <button @click="startEditWatch(w.id)" class="text-emerald-600 text-[11px] underline mr-2">Ubah</button>
+                <button @click="deleteWatch(w.id)" class="text-rose-600 text-[11px] underline">Hapus</button>
               </td>
             </tr>
           </tbody>
@@ -366,7 +377,7 @@
   <!-- ================= TAB: PENGATURAN ================= -->
   <div v-else-if="activeTab==='pengaturan'" class="space-y-4">
     <div class="glass-card p-4">
-      <h2 class="font-display font-bold text-white mb-1">🗄️ Database (Google Sheets)</h2>
+      <h2 class="font-display font-bold text-slate-800 mb-1">🗄️ Database (Google Sheets)</h2>
       <p class="text-xs text-slate-400 mb-3">{{ syncStatus.connected ? 'Data disinkronkan ke Google Sheets lewat Apps Script — semua perangkat yang membuka aplikasi ini dengan URL yang sama akan melihat data yang sama.' : 'Belum tersambung ke Google Sheets. Tempel URL Web App Apps Script Anda di bawah supaya data (Portofolio & Watchlist) tersimpan terpusat, bukan hanya di perangkat ini.' }}</p>
       <form @submit.prevent="connectScript" class="space-y-3">
         <div>
@@ -375,15 +386,15 @@
         </div>
         <button type="submit" class="btn-primary w-full">🔗 Sambungkan</button>
       </form>
-      <p class="text-xs mt-3" :class="syncStatus.state==='error' ? 'text-rose-400' : (syncStatus.connected ? 'text-emerald-400' : 'text-slate-500')">{{ syncStatus.message }}</p>
+      <p class="text-xs mt-3" :class="syncStatus.state==='error' ? 'text-rose-600' : (syncStatus.connected ? 'text-emerald-600' : 'text-slate-500')">{{ syncStatus.message }}</p>
     </div>
   </div>
 
   <!-- ================= FOOTER VERSI ================= -->
   <div class="text-center text-[11px] text-slate-500 mt-8 opacity-70">🚀 Tracking Saham {{ APP_VERSION }} · build {{ APP_BUILD }}</div>
 
-  <!-- ================= BOTTOM TAB BAR ================= -->
-  <div class="fixed bottom-0 inset-x-0 z-50 px-4 pb-4">
+  <!-- ================= BOTTOM TAB BAR (mobile only) ================= -->
+  <div class="lg:hidden fixed bottom-0 inset-x-0 z-50 px-4 pb-4">
     <div class="max-w-lg mx-auto flex gap-1 p-1.5 rounded-2xl glass-card">
       <button v-for="t in tabs" :key="t.id" @click="activeTab=t.id"
         class="tab-btn flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-[11px] font-semibold"
@@ -429,8 +440,8 @@ createApp({
     const fmtPct = n => (n===null||n===undefined||isNaN(n)) ? '—' : (n>=0?'+':'') + (n*100).toFixed(2) + '%';
     const fmtDate = s => { const d = new Date(s+'T00:00:00'); return d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}); };
     const fmtMonth = s => { const d = new Date(s+'T00:00:00'); return d.toLocaleDateString('id-ID',{month:'long',year:'numeric'}); };
-    const pctColor = v => v===null||v===undefined ? 'text-slate-400' : (v>=0 ? 'text-emerald-400' : 'text-rose-400');
-    const cagrColor = v => v===null||v===undefined ? 'text-slate-500' : (v>=0 ? 'text-emerald-400' : 'text-rose-400');
+    const pctColor = v => v===null||v===undefined ? 'text-slate-400' : (v>=0 ? 'text-emerald-600' : 'text-rose-600');
+    const cagrColor = v => v===null||v===undefined ? 'text-slate-500' : (v>=0 ? 'text-emerald-600' : 'text-rose-600');
 
     const hasClaudeStorage = (typeof window.storage !== 'undefined');
 
@@ -708,13 +719,13 @@ createApp({
       const gridLines = [0,0.5,1].map(f=>{
         const val = minY + f*range;
         const yy = padT + ch - f*ch;
-        return `<line x1="${padL}" y1="${yy}" x2="${w-padR}" y2="${yy}" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
-        <text x="${padL-6}" y="${yy+3}" font-size="9" fill="rgba(226,232,230,.45)" text-anchor="end" font-family="Inter">${val.toFixed(0)}</text>`;
+        return `<line x1="${padL}" y1="${yy}" x2="${w-padR}" y2="${yy}" stroke="rgba(15,23,42,.08)" stroke-width="1"/>
+        <text x="${padL-6}" y="${yy+3}" font-size="9" fill="rgba(30,41,59,.55)" text-anchor="end" font-family="Inter">${val.toFixed(0)}</text>`;
       }).join('');
 
       const labelStep = points.length > 6 ? Math.ceil(points.length/6) : 1;
       const labels = points.map((p,i)=> (i%labelStep===0 || i===points.length-1) ?
-        `<text x="${x(i).toFixed(1)}" y="${h-4}" font-size="9" fill="rgba(226,232,230,.45)" text-anchor="middle" font-family="Inter">${shortMonth(p.date)}</text>` : '').join('');
+        `<text x="${x(i).toFixed(1)}" y="${h-4}" font-size="9" fill="rgba(30,41,59,.55)" text-anchor="middle" font-family="Inter">${shortMonth(p.date)}</text>` : '').join('');
 
       const dotsNab = points.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p.nab).toFixed(1)}" r="3" fill="#34D399"/>`).join('');
       const dotsIhsg = points.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p.ihsgIdx).toFixed(1)}" r="3" fill="#FBBF24"/>`).join('');
