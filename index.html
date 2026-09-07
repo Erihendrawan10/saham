@@ -4,816 +4,834 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tracking Kinerja Saham</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.4.21/vue.global.prod.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
-  :root{
-    --paper:#EEF0EA;
-    --card:#FBFAF7;
-    --ink:#182620;
-    --ink-muted:#5C6B62;
-    --border:#D9DCD1;
-    --primary:#1F3D34;
-    --gain:#3F7D58;
-    --loss:#B3492F;
-    --gain-bg:#E4EEE7;
-    --loss-bg:#F5E5DF;
-    --accent2:#9A8148;
+  [v-cloak]{ display:none; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{
+    font-family:'Inter',sans-serif;
+    color:#F1F5F4;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(52,211,153,.18), transparent 45%),
+      radial-gradient(circle at 100% 20%, rgba(45,212,191,.12), transparent 40%),
+      linear-gradient(180deg, #0A100D 0%, #0B1512 45%, #0A0F0D 100%);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
   }
-  *{box-sizing:border-box;}
-  body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
-  .app{max-width:560px;margin:0 auto;padding:20px 16px 60px;}
-  .masthead{text-align:center;}
-  .masthead h1{font-family:'Source Serif 4',serif;font-weight:600;font-size:24px;margin:0;color:var(--primary);}
+  .font-display{ font-family:'Sora',sans-serif; }
 
-  .tabs{display:flex;border-bottom:1px solid var(--border);margin:16px 0 18px;gap:4px;}
-  .tab{flex:1;text-align:center;padding:10px 4px;font-size:13.5px;font-weight:600;color:var(--ink-muted);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;}
-  .tab.active{color:var(--primary);border-bottom:2px solid var(--primary);}
-  .view{display:none;}
-  .view.active{display:block;}
-
-  .hero{background:var(--primary);color:#F4F5F0;border-radius:4px;padding:20px 18px;margin-bottom:14px;}
-  .hero .label{font-size:12px;opacity:.75;margin:0 0 4px;}
-  .hero .value{font-family:'Source Serif 4',serif;font-size:30px;font-weight:600;margin:0;line-height:1.15;}
-  .hero .sub{display:flex;gap:14px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(244,245,240,.18);flex-wrap:wrap;}
-  .hero .sub div{flex:1;min-width:100px;}
-  .hero .sub .k{font-size:11px;opacity:.7;margin:0 0 2px;}
-  .hero .sub .v{font-size:15px;font-weight:600;margin:0;font-family:'Source Serif 4',serif;}
-
-  .cagr-grid{display:flex;gap:10px;margin-bottom:14px;}
-  .cagr-box{flex:1;background:var(--card);border:1px solid var(--border);border-radius:4px;padding:12px 10px;text-align:center;}
-  .cagr-box .t{font-size:10.5px;color:var(--ink-muted);margin:0 0 6px;line-height:1.3;}
-  .cagr-box .n{font-family:'Source Serif 4',serif;font-size:18px;font-weight:600;margin:0;}
-
-  .card{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:16px;margin-bottom:14px;}
-  .card h2{font-family:'Source Serif 4',serif;font-size:16px;font-weight:600;margin:0 0 4px;color:var(--primary);}
-  .card .desc{font-size:12px;color:var(--ink-muted);margin:0 0 12px;}
-
-  .chart-wrap svg{width:100%;height:auto;display:block;}
-  .legend{display:flex;gap:16px;margin-top:8px;font-size:11.5px;color:var(--ink-muted);flex-wrap:wrap;}
-  .legend span{display:inline-flex;align-items:center;gap:5px;}
-  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
-
-  .row-item{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;}
-  .row-item:last-child{border-bottom:none;}
-  .row-item .m{font-weight:600;}
-  .row-item .meta{font-size:11.5px;color:var(--ink-muted);}
-  .pill{font-size:11px;font-weight:600;padding:2px 7px;border-radius:20px;display:inline-block;}
-  .pill.gain{background:var(--gain-bg);color:var(--gain);}
-  .pill.loss{background:var(--loss-bg);color:var(--loss);}
-
-  form{display:flex;flex-direction:column;gap:10px;}
-  .field label{font-size:12px;color:var(--ink-muted);display:block;margin-bottom:4px;}
-  .field input{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:4px;font-family:'Inter',sans-serif;font-size:14px;background:#fff;color:var(--ink);}
-  .field input:focus{outline:none;border-color:var(--primary);}
-  .field-row{display:flex;gap:10px;}
-  .field-row .field{flex:1;}
-  button.primary{background:var(--primary);color:#F4F5F0;border:none;padding:11px;border-radius:4px;font-size:14px;font-weight:600;cursor:pointer;}
-  button.secondary{background:#fff;color:var(--primary);border:1px solid var(--primary);padding:9px;border-radius:4px;font-size:13px;font-weight:600;cursor:pointer;}
-  .btn-row{display:flex;gap:8px;}
-  .btn-row button, .btn-row label{flex:1;}
-  .delete-btn{background:none;border:none;color:var(--loss);font-size:11.5px;cursor:pointer;padding:0;text-decoration:underline;}
-  .edit-btn{background:none;border:none;color:var(--primary);font-size:11.5px;cursor:pointer;padding:0;text-decoration:underline;margin-right:10px;}
-  .empty{text-align:center;color:var(--ink-muted);font-size:13px;padding:24px 8px;}
-
-  table.data-table{width:100%;border-collapse:collapse;font-size:12px;}
-  table.data-table th{text-align:right;font-weight:600;color:var(--ink-muted);font-size:10.5px;padding:6px 4px;border-bottom:1px solid var(--border);}
-  table.data-table th:first-child, table.data-table td:first-child{text-align:left;}
-  table.data-table td{text-align:right;padding:7px 4px;border-bottom:1px solid var(--border);}
-  table.data-table tr:last-child td{border-bottom:none;}
-  .scroll-x{overflow-x:auto;}
-
-  .filebtn{display:inline-block;text-align:center;}
-  input[type=file]{display:none;}
-  .year-filter{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
-  .year-filter label{font-size:12.5px;color:var(--ink-muted);font-weight:600;}
-  .year-filter select{flex:1;padding:9px 10px;border:1px solid var(--border);border-radius:4px;font-family:'Inter',sans-serif;font-size:14px;background:#fff;color:var(--ink);}
-  .compare-grid{display:flex;gap:0;border:1px solid var(--border);border-radius:4px;overflow:hidden;}
-  .compare-col{flex:1;padding:12px;}
-  .compare-col:first-child{border-right:1px solid var(--border);background:var(--gain-bg);}
-  .compare-col .yr{font-size:11px;color:var(--ink-muted);margin:0 0 8px;font-weight:600;}
-  .compare-row{display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;}
-  .compare-row .k{color:var(--ink-muted);}
-  .compare-row .v{font-weight:600;}
-  .note{font-size:11px;color:var(--ink-muted);margin-top:8px;line-height:1.5;}
+  /* ---- komponen kustom (efek "2026": glass + gradient + glow) ---- */
+  .glass-card{
+    background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,.09);
+    border-radius: 1.5rem;
+    box-shadow: 0 20px 45px -20px rgba(0,0,0,.6);
+  }
+  .hero-card{
+    position:relative; overflow:hidden; border-radius:1.75rem; padding:22px 20px;
+    background: linear-gradient(135deg, #10B981 0%, #0D9488 55%, #065F5B 100%);
+    box-shadow: 0 25px 60px -18px rgba(16,185,129,.45);
+  }
+  .hero-glow{
+    position:absolute; width:220px; height:220px; border-radius:9999px;
+    background: radial-gradient(circle, rgba(255,255,255,.35), transparent 70%);
+    top:-90px; right:-70px; filter: blur(4px); opacity:.6; pointer-events:none;
+  }
+  .input-field{
+    width:100%; padding:.62rem .8rem; font-size:14px; color:#F1F5F4;
+    background: rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12);
+    border-radius:.9rem; transition: border-color .15s, background .15s;
+  }
+  .input-field::placeholder{ color: rgba(241,245,244,.35); }
+  .input-field:focus{ outline:none; border-color:#34D399; background: rgba(255,255,255,.08); }
+  .btn-primary{
+    background: linear-gradient(135deg,#34D399,#0D9488);
+    color:#052E27; font-weight:700; font-size:14px; padding:.68rem; border:none; border-radius:.9rem;
+    cursor:pointer; box-shadow: 0 10px 24px -8px rgba(16,185,129,.55);
+    transition: transform .12s ease;
+  }
+  .btn-primary:active{ transform: scale(.97); }
+  .btn-secondary{
+    background: rgba(255,255,255,.05); color:#E2E8E6; border:1px solid rgba(255,255,255,.14);
+    font-weight:600; font-size:13px; padding:.62rem; border-radius:.9rem; cursor:pointer;
+    transition: background .15s;
+  }
+  .btn-secondary:hover{ background: rgba(255,255,255,.09); }
+  .pill{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:9999px; display:inline-flex; align-items:center; gap:4px; }
+  .pill-gain{ background: rgba(52,211,153,.14); color:#34D399; }
+  .pill-loss{ background: rgba(251,113,133,.14); color:#FB7185; }
+  .pill-amber{ background: rgba(251,191,36,.14); color:#FBBF24; }
+  .pill-slate{ background: rgba(148,163,184,.14); color:#CBD5E1; }
+  .dot{ width:8px; height:8px; border-radius:9999px; display:inline-block; }
+  .tab-btn{ transition: all .18s ease; }
+  .scrollbar-thin::-webkit-scrollbar{ height:6px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.15); border-radius:9999px; }
 </style>
 </head>
 <body>
-<div class="app">
-  <div class="masthead">
-    <h1>Tracking Kinerja Saham</h1>
+<div id="app" v-cloak class="max-w-lg mx-auto px-4 pt-7 pb-28">
+
+  <!-- ================= HEADER ================= -->
+  <div class="text-center mb-6">
+    <h1 class="font-display font-extrabold text-2xl tracking-tight bg-clip-text text-transparent" style="background-image:linear-gradient(135deg,#6EE7B7,#2DD4BF,#34D399); -webkit-background-clip:text;">
+      📈 Tracking Kinerja Saham
+    </h1>
   </div>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="ringkasan">Ringkasan</button>
-    <button class="tab" data-tab="data">Portofolio</button>
-    <button class="tab" data-tab="watchlist">Watchlist</button>
-    <button class="tab" data-tab="pengaturan">Pengaturan</button>
+  <!-- ================= TAB: RINGKASAN ================= -->
+  <div v-if="activeTab==='ringkasan'" class="space-y-4">
+    <div v-if="computedRows.length===0" class="glass-card p-10 text-center text-slate-400">
+      <div class="text-5xl mb-3">🌱</div>
+      Belum ada data.<br>Tambahkan setoran awal di tab Portofolio.
+    </div>
+
+    <template v-else>
+      <!-- Hero -->
+      <div class="hero-card">
+        <div class="hero-glow"></div>
+        <p class="text-emerald-50/80 text-xs font-semibold mb-1 relative">💰 Nilai portofolio saat ini</p>
+        <p class="font-display text-4xl font-extrabold text-white relative">{{ fmtRp(lastRow.equity) }}</p>
+        <div class="flex gap-4 mt-4 pt-4 border-t border-white/20 flex-wrap relative">
+          <div class="flex-1 min-w-[92px]">
+            <p class="text-[11px] text-emerald-50/70">🧮 NAB saat ini</p>
+            <p class="text-[15px] font-bold text-white font-display">{{ fmtRp(lastRow.nab) }}</p>
+          </div>
+          <div class="flex-1 min-w-[92px]">
+            <p class="text-[11px] text-emerald-50/70">{{ totalReturn>=0 ? '🚀' : '📉' }} Return kumulatif</p>
+            <p class="text-[15px] font-bold font-display" :class="totalReturn>=0 ? 'text-emerald-100' : 'text-rose-100'">{{ fmtPct(totalReturn) }}</p>
+          </div>
+          <div class="flex-1 min-w-[92px]">
+            <p class="text-[11px] text-emerald-50/70">📅 Per {{ fmtDate(lastRow.date) }}</p>
+            <p class="text-[15px] font-bold text-white font-display">{{ computedRows.length }} entri</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- CAGR grid -->
+      <div class="grid grid-cols-3 gap-2.5">
+        <div class="glass-card p-3 text-center">
+          <p class="text-[10px] text-slate-400 mb-1.5 leading-tight">💵 CAGR Equity<br>(money-weighted)</p>
+          <p class="font-display text-[17px] font-bold" :class="cagrColor(cagr.equity)">{{ cagr.equity===null ? '—' : fmtPct(cagr.equity) }}</p>
+        </div>
+        <div class="glass-card p-3 text-center">
+          <p class="text-[10px] text-slate-400 mb-1.5 leading-tight">📐 CAGR NAB<br>(time-weighted)</p>
+          <p class="font-display text-[17px] font-bold" :class="cagrColor(cagr.nab)">{{ cagr.nab===null ? '—' : fmtPct(cagr.nab) }}</p>
+        </div>
+        <div class="glass-card p-3 text-center">
+          <p class="text-[10px] text-slate-400 mb-1.5 leading-tight">🏛️ CAGR IHSG<br>(benchmark)</p>
+          <p class="font-display text-[17px] font-bold" :class="cagrColor(cagr.ihsg)">{{ cagr.ihsg===null ? '—' : fmtPct(cagr.ihsg) }}</p>
+        </div>
+      </div>
+
+      <!-- Total dividen -->
+      <div class="glass-card p-4 flex items-center justify-between">
+        <div>
+          <p class="text-[11px] text-slate-400">💎 Total Dividen Diterima</p>
+          <p class="text-[11px] text-slate-500 -mt-0.5">sepanjang waktu</p>
+          <p class="font-display text-xl font-bold text-amber-400 mt-1.5">{{ fmtRp(totalDividenAllTime) }}</p>
+        </div>
+        <div class="text-4xl opacity-80">🪙</div>
+      </div>
+
+      <!-- Filter tahun -->
+      <div v-if="years.length>1" class="flex items-center gap-2">
+        <label class="text-xs font-semibold text-slate-400 whitespace-nowrap">🗓️ Lihat tahun</label>
+        <select v-model="yearFilter" class="input-field">
+          <option value="all">Semua Tahun</option>
+          <option v-for="y in years" :key="y" :value="String(y)">{{ y }}</option>
+        </select>
+      </div>
+
+      <!-- Perbandingan tahun -->
+      <div v-if="yearStats" class="glass-card p-4">
+        <h2 class="font-display font-bold text-white mb-1">⚔️ Performa {{ yearFilter }}</h2>
+        <p class="text-xs text-slate-400 mb-3">Dibandingkan dengan tahun {{ parseInt(yearFilter)-1 }}{{ prevYearStats ? '' : ' (tidak ada data)' }}.</p>
+        <div class="grid grid-cols-2 rounded-2xl overflow-hidden border border-white/10">
+          <div class="p-3" style="background:rgba(52,211,153,.08);">
+            <p class="text-[11px] text-slate-300 font-bold mb-2">{{ yearFilter }}</p>
+            <div class="flex justify-between text-xs py-1"><span class="text-slate-400">Return NAB</span><span class="font-semibold" :class="pctColor(yearStats.nabReturn)">{{ fmtPct(yearStats.nabReturn) }}</span></div>
+            <div class="flex justify-between text-xs py-1"><span class="text-slate-400">Return IHSG</span><span class="font-semibold" :class="pctColor(yearStats.ihsgReturn)">{{ fmtPct(yearStats.ihsgReturn) }}</span></div>
+            <div class="flex justify-between text-xs py-1"><span class="text-slate-400">💵 Setoran</span><span class="font-semibold text-white">{{ fmtRp(yearStats.totalDana) }}</span></div>
+            <div class="flex justify-between text-xs py-1"><span class="text-slate-400">💎 Dividen</span><span class="font-semibold text-white">{{ fmtRp(yearStats.totalDividen) }}</span></div>
+          </div>
+          <div class="p-3" style="background:rgba(255,255,255,.02);">
+            <p class="text-[11px] text-slate-300 font-bold mb-2">{{ parseInt(yearFilter)-1 }}</p>
+            <template v-if="prevYearStats">
+              <div class="flex justify-between text-xs py-1"><span class="text-slate-400">Return NAB</span><span class="font-semibold" :class="pctColor(prevYearStats.nabReturn)">{{ fmtPct(prevYearStats.nabReturn) }}</span></div>
+              <div class="flex justify-between text-xs py-1"><span class="text-slate-400">Return IHSG</span><span class="font-semibold" :class="pctColor(prevYearStats.ihsgReturn)">{{ fmtPct(prevYearStats.ihsgReturn) }}</span></div>
+              <div class="flex justify-between text-xs py-1"><span class="text-slate-400">💵 Setoran</span><span class="font-semibold text-white">{{ fmtRp(prevYearStats.totalDana) }}</span></div>
+              <div class="flex justify-between text-xs py-1"><span class="text-slate-400">💎 Dividen</span><span class="font-semibold text-white">{{ fmtRp(prevYearStats.totalDividen) }}</span></div>
+            </template>
+            <p v-else class="text-xs text-slate-500">Belum ada data.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="glass-card p-4">
+        <h2 class="font-display font-bold text-white mb-1">📈 NAB vs IHSG (rebased ke 1000)</h2>
+        <p class="text-xs text-slate-400 mb-3">Membandingkan kinerja murni investasi Anda terhadap IHSG, tidak terpengaruh besar/kecilnya setoran.</p>
+        <div v-if="activeComputed.length>=2">
+          <div v-html="chartSvg"></div>
+          <div class="flex gap-4 mt-2 text-[11px] text-slate-400">
+            <span class="flex items-center gap-1.5"><span class="dot" style="background:#34D399;"></span>NAB Anda</span>
+            <span class="flex items-center gap-1.5"><span class="dot" style="background:#FBBF24;"></span>IHSG</span>
+          </div>
+        </div>
+        <div v-else class="text-center text-slate-500 text-sm py-6">Tambahkan minimal 2 entri untuk melihat grafik.</div>
+      </div>
+
+      <!-- Kinerja bulanan -->
+      <div class="glass-card p-4">
+        <h2 class="font-display font-bold text-white mb-3">🏆 Kinerja bulanan vs IHSG</h2>
+        <div v-if="monthlyPerf.length===0" class="text-center text-slate-500 text-sm py-4">Belum ada data bulanan.</div>
+        <div v-for="r in monthlyPerf" :key="r.id" class="flex justify-between items-center py-2.5 border-b border-white/5 last:border-0">
+          <div>
+            <div class="font-semibold text-sm text-white">{{ fmtMonth(r.date) }}</div>
+            <div class="text-[11px] text-slate-400">NAB {{ fmtPct(r.nabPct) }} &middot; IHSG {{ fmtPct(r.ihsgPct) }}</div>
+          </div>
+          <span class="pill" :class="(r.nabPct-r.ihsgPct)>=0 ? 'pill-gain' : 'pill-loss'">
+            {{ (r.nabPct-r.ihsgPct)>=0 ? '🏆 Unggul' : '🔻 Kalah' }} {{ fmtPct(Math.abs(r.nabPct-r.ihsgPct)).replace('+','') }}
+          </span>
+        </div>
+      </div>
+    </template>
   </div>
 
-  <div id="view-ringkasan" class="view active"></div>
-  <div id="view-data" class="view"></div>
-  <div id="view-watchlist" class="view"></div>
-  <div id="view-pengaturan" class="view"></div>
+  <!-- ================= TAB: PORTOFOLIO ================= -->
+  <div v-else-if="activeTab==='data'" class="space-y-4">
+    <div class="glass-card p-4">
+      <h2 class="font-display font-bold text-white mb-1">{{ editingEntry ? '✏️ Ubah entri' : (rows.length===0 ? '🌱 Setoran awal' : '➕ Tambah entri bulan ini') }}</h2>
+      <p class="text-xs text-slate-400 mb-3">{{ rows.length===0 ? 'Entri pertama menjadi baseline (NAB = 1000).' : 'Isi tanggal, dana masuk/keluar, nilai equity aktual (dari broker), dan level IHSG.' }}</p>
+      <form @submit.prevent="submitEntry" class="space-y-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">📅 Tanggal</label>
+          <input type="date" v-model="fDate" required class="input-field">
+        </div>
+        <div class="flex gap-3">
+          <div class="flex-1">
+            <label class="text-xs text-slate-400 block mb-1">💵 Dana masuk/keluar (Rp)</label>
+            <input type="number" v-model="fDana" placeholder="0" required class="input-field">
+          </div>
+          <div class="flex-1">
+            <label class="text-xs text-slate-400 block mb-1">💼 Equity aktual (Rp)</label>
+            <input type="number" v-model="fEquity" placeholder="0" min="0" required class="input-field">
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <div class="flex-1">
+            <label class="text-xs text-slate-400 block mb-1">💎 Dividen diterima (Rp)</label>
+            <input type="number" v-model="fDividen" placeholder="0" min="0" class="input-field">
+          </div>
+          <div class="flex-1">
+            <label class="text-xs text-slate-400 block mb-1">🏛️ IHSG</label>
+            <input type="number" v-model="fIhsg" placeholder="7000" min="0" step="0.01" required class="input-field">
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button type="submit" class="btn-primary flex-1">{{ editingId ? '💾 Simpan perubahan' : '➕ Tambah entri' }}</button>
+          <button v-if="editingId" type="button" @click="cancelEditEntry" class="btn-secondary flex-1">Batal</button>
+        </div>
+      </form>
+      <p class="text-[11px] text-slate-500 mt-3 leading-relaxed">Dana negatif berarti penarikan dana. Isi minus di depan angka, misal -50000. Dividen cukup untuk dicatat/dipantau — jika kas dividen masih mengendap di akun, nilainya otomatis sudah ikut terhitung di kolom Equity, jadi tidak perlu dimasukkan lagi ke kolom Dana. Kalau dividen ditarik keluar dari akun, catat penarikannya di kolom Dana (minus). Data tersimpan otomatis setiap kali ditambah/diubah.</p>
+    </div>
 
-  <div id="app-version" style="text-align:center;font-size:11px;color:var(--ink-muted);margin-top:24px;opacity:.7;">Tracking Saham 1.0</div>
+    <div class="glass-card p-4">
+      <h2 class="font-display font-bold text-white mb-3">📜 Riwayat lengkap</h2>
+      <div v-if="computedRows.length" class="overflow-x-auto scrollbar-thin">
+        <table class="w-full text-xs" style="min-width:640px;">
+          <thead>
+            <tr class="text-slate-400">
+              <th class="text-left font-semibold pb-2">Tanggal</th>
+              <th class="text-right font-semibold pb-2">Dana</th>
+              <th class="text-right font-semibold pb-2">Dividen</th>
+              <th class="text-right font-semibold pb-2">Unit</th>
+              <th class="text-right font-semibold pb-2">Equity</th>
+              <th class="text-right font-semibold pb-2">NAB</th>
+              <th class="text-right font-semibold pb-2">NAB%</th>
+              <th class="text-right font-semibold pb-2">IHSG</th>
+              <th class="text-right font-semibold pb-2">IHSG%</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in reversedComputedRows" :key="r.id" class="border-t border-white/5">
+              <td class="py-2 text-slate-300">{{ fmtDate(r.date) }}</td>
+              <td class="py-2 text-right text-slate-300">{{ fmtRp(r.dana) }}</td>
+              <td class="py-2 text-right text-slate-300">{{ r.dividen ? fmtRp(r.dividen) : '—' }}</td>
+              <td class="py-2 text-right text-slate-300">{{ r.totalUnit.toFixed(2) }}</td>
+              <td class="py-2 text-right text-slate-300">{{ fmtRp(r.equity) }}</td>
+              <td class="py-2 text-right text-slate-300">{{ fmtRp(r.nab) }}</td>
+              <td class="py-2 text-right font-medium" :class="pctColor(r.nabPct)">{{ fmtPct(r.nabPct) }}</td>
+              <td class="py-2 text-right text-slate-300">{{ r.ihsg }}</td>
+              <td class="py-2 text-right font-medium" :class="pctColor(r.ihsgPct)">{{ fmtPct(r.ihsgPct) }}</td>
+              <td class="py-2 text-right whitespace-nowrap">
+                <button @click="startEdit(r.id)" class="text-emerald-400 text-[11px] underline mr-2">Ubah</button>
+                <button @click="deleteEntry(r.id)" class="text-rose-400 text-[11px] underline">Hapus</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-else class="text-center text-slate-500 text-sm py-6">Belum ada entri.</div>
+    </div>
+  </div>
+
+  <!-- ================= TAB: WATCHLIST ================= -->
+  <div v-else-if="activeTab==='watchlist'" class="space-y-4">
+    <div class="glass-card p-4">
+      <h2 class="font-display font-bold text-white mb-1">{{ editingWatch ? '✏️ Ubah saham' : '🎯 Tambah ke watchlist' }}</h2>
+      <p class="text-xs text-slate-400 mb-3">Kode pakai kode IDX (mis. BBCA, TLKM) — otomatis dicari sebagai {KODE}.JK di Yahoo Finance. EPS &amp; mean PE 5 tahun isi manual, idealnya diperbarui tiap ada laporan keuangan kuartalan baru.</p>
+      <form @submit.prevent="submitWatch" class="space-y-3">
+        <div class="flex gap-3">
+          <div class="flex-1">
+            <label class="text-xs text-slate-400 block mb-1">🏷️ Kode Saham (IDX)</label>
+            <input type="text" v-model="wKode" placeholder="BBCA" required class="input-field">
+          </div>
+          <div class="flex-1">
+            <label class="text-xs text-slate-400 block mb-1">🏢 Nama (opsional)</label>
+            <input type="text" v-model="wNama" placeholder="Bank BCA" class="input-field">
+          </div>
+        </div>
+        <div class="flex gap-3">
+          <div class="flex-1">
+            <label class="text-xs text-slate-400 block mb-1">📐 EPS (Rp)</label>
+            <input type="number" v-model="wEps" placeholder="350" step="0.01" required class="input-field">
+          </div>
+          <div class="flex-1">
+            <label class="text-xs text-slate-400 block mb-1">📊 Mean PE Band 5 Tahun</label>
+            <input type="number" v-model="wPe" placeholder="18.5" step="0.01" required class="input-field">
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button type="submit" class="btn-primary flex-1">{{ editingWatchId ? '💾 Simpan perubahan' : '🎯 Tambah ke watchlist' }}</button>
+          <button v-if="editingWatchId" type="button" @click="cancelEditWatch" class="btn-secondary flex-1">Batal</button>
+        </div>
+      </form>
+      <p class="text-[11px] text-slate-500 mt-3 leading-relaxed">Harga Wajar = EPS × Mean PE 5 Tahun. MOS = (Harga Wajar − Price) ÷ Harga Wajar. Status "Beli" kalau MOS ≥ 30%, selain itu "Mahal". Action "Jual" kalau Price ≥ Harga Wajar, selain itu "Hold".</p>
+    </div>
+
+    <div class="glass-card p-4">
+      <h2 class="font-display font-bold text-white mb-1">👁️ Daftar watchlist</h2>
+      <p class="text-xs text-slate-400 mb-3">{{ watchlist.length }} saham dipantau &middot; {{ totalBeli }} sinyal 🟢 Beli saat ini.</p>
+      <button @click="refreshPrices" class="btn-secondary w-full mb-3">🔄 Refresh Harga (Yahoo Finance)</button>
+
+      <div v-if="watchlist.length" class="overflow-x-auto scrollbar-thin">
+        <table class="w-full text-xs" style="min-width:560px;">
+          <thead>
+            <tr class="text-slate-400">
+              <th class="text-left font-semibold pb-2">Kode</th>
+              <th class="text-right font-semibold pb-2">Price</th>
+              <th class="text-right font-semibold pb-2">Harga Wajar</th>
+              <th class="text-right font-semibold pb-2">MOS</th>
+              <th class="text-center font-semibold pb-2">Status</th>
+              <th class="text-center font-semibold pb-2">Action</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="w in sortedWatchlist" :key="w.id" class="border-t border-white/5">
+              <td class="py-2">
+                <div class="font-semibold text-white">{{ w.kode }}</div>
+                <div v-if="w.nama" class="text-[10px] text-slate-500">{{ w.nama }}</div>
+              </td>
+              <td class="py-2 text-right text-slate-300">{{ w.price ? fmtRp(w.price) : '—' }}</td>
+              <td class="py-2 text-right text-slate-300">{{ fmtRp(w.hargaWajar) }}</td>
+              <td class="py-2 text-right font-medium" :class="pctColor(w.mos)">{{ fmtPct(w.mos) }}</td>
+              <td class="py-2 text-center">
+                <span class="pill" :class="w.status==='Beli' ? 'pill-gain' : 'pill-loss'">{{ w.status==='Beli' ? '🟢' : '🔴' }} {{ w.status }}</span>
+              </td>
+              <td class="py-2 text-center">
+                <span class="pill" :class="w.action==='Jual' ? 'pill-amber' : 'pill-slate'">{{ w.action==='Jual' ? '🔔' : '✋' }} {{ w.action }}</span>
+              </td>
+              <td class="py-2 text-right whitespace-nowrap">
+                <button @click="startEditWatch(w.id)" class="text-emerald-400 text-[11px] underline mr-2">Ubah</button>
+                <button @click="deleteWatch(w.id)" class="text-rose-400 text-[11px] underline">Hapus</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="text-[11px] text-slate-500 mt-3 leading-relaxed">🕒 Terakhir update harga: {{ lastPriceUpdateLabel }}. Diperbarui otomatis tiap awal kuartal (Jan/Apr/Jul/Okt) lewat trigger Apps Script, atau kapan saja lewat tombol Refresh di atas.</p>
+      </div>
+      <div v-else class="text-center text-slate-500 text-sm py-6">Belum ada saham di watchlist.</div>
+    </div>
+  </div>
+
+  <!-- ================= TAB: PENGATURAN ================= -->
+  <div v-else-if="activeTab==='pengaturan'" class="space-y-4">
+    <div class="glass-card p-4">
+      <h2 class="font-display font-bold text-white mb-1">🗄️ Database (Google Sheets)</h2>
+      <p class="text-xs text-slate-400 mb-3">{{ syncStatus.connected ? 'Data disinkronkan ke Google Sheets lewat Apps Script — semua perangkat yang membuka aplikasi ini dengan URL yang sama akan melihat data yang sama.' : 'Belum tersambung ke Google Sheets. Tempel URL Web App Apps Script Anda di bawah supaya data (Portofolio & Watchlist) tersimpan terpusat, bukan hanya di perangkat ini.' }}</p>
+      <form @submit.prevent="connectScript" class="space-y-3">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">🔗 URL Web App Apps Script</label>
+          <input type="url" v-model="scriptUrlInput" placeholder="https://script.google.com/macros/s/xxx/exec" class="input-field">
+        </div>
+        <button type="submit" class="btn-primary w-full">🔗 Sambungkan</button>
+      </form>
+      <p class="text-xs mt-3" :class="syncStatus.state==='error' ? 'text-rose-400' : (syncStatus.connected ? 'text-emerald-400' : 'text-slate-500')">{{ syncStatus.message }}</p>
+    </div>
+  </div>
+
+  <!-- ================= FOOTER VERSI ================= -->
+  <div class="text-center text-[11px] text-slate-500 mt-8 opacity-70">🚀 Tracking Saham {{ APP_VERSION }} · build {{ APP_BUILD }}</div>
+
+  <!-- ================= BOTTOM TAB BAR ================= -->
+  <div class="fixed bottom-0 inset-x-0 z-50 px-4 pb-4">
+    <div class="max-w-lg mx-auto flex gap-1 p-1.5 rounded-2xl glass-card">
+      <button v-for="t in tabs" :key="t.id" @click="activeTab=t.id"
+        class="tab-btn flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-[11px] font-semibold"
+        :style="activeTab===t.id
+          ? 'background:linear-gradient(135deg,#34D399,#0D9488); color:#052E27; box-shadow:0 8px 18px -6px rgba(16,185,129,.55);'
+          : 'color:#94A3B8;'">
+        <span class="text-base leading-none">{{ t.emoji }}</span>
+        <span>{{ t.label }}</span>
+      </button>
+    </div>
+  </div>
 </div>
 
 <script>
-const APP_VERSION = '1.0';
-const APP_BUILD = '2026-09-03';
+const { createApp, ref, reactive, computed, onMounted } = Vue;
 
-let rows = [];      // {id, date:'YYYY-MM-DD', dana, dividen, equity, ihsg}
-let watchlist = [];  // {id, kode, nama, eps, peMean, price, hargaWajar, mos, status, action, updatedAt}
-let editingId = null;
-let editingWatchId = null;
-let loaded = false;
-let yearFilter = 'all';
+createApp({
+  setup(){
+    const APP_VERSION = '2.0';
+    const APP_BUILD = '2026-09-03';
 
-const fmtRp = n => 'Rp' + Math.round(n).toLocaleString('id-ID');
-const fmtPct = n => (n===null||n===undefined||isNaN(n)) ? '—' : (n>=0?'+':'') + (n*100).toFixed(2) + '%';
-const fmtDate = s => { const d = new Date(s+'T00:00:00'); return d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}); };
-const fmtMonth = s => { const d = new Date(s+'T00:00:00'); return d.toLocaleDateString('id-ID',{month:'long',year:'numeric'}); };
+    const tabs = [
+      { id:'ringkasan', emoji:'📊', label:'Ringkasan' },
+      { id:'data', emoji:'💼', label:'Portofolio' },
+      { id:'watchlist', emoji:'👁️', label:'Watchlist' },
+      { id:'pengaturan', emoji:'⚙️', label:'Pengaturan' },
+    ];
+    const activeTab = ref('ringkasan');
 
-const hasClaudeStorage = (typeof window.storage !== 'undefined');
+    // ---------- state ----------
+    const rows = ref([]);          // {id, date:'YYYY-MM-DD', dana, dividen, equity, ihsg}
+    const watchlist = ref([]);     // {id, kode, nama, eps, peMean, price, hargaWajar, mos, status, action, updatedAt}
+    const editingId = ref(null);
+    const editingWatchId = ref(null);
+    const loaded = ref(false);
+    const yearFilter = ref('all');
 
-// ---------- Google Sheets (Apps Script) sebagai database pusat ----------
-// Isi URL Web App Apps Script Anda di sini supaya permanen untuk semua pengunjung
-// (setelah deploy script, tempel URL "…/exec" di antara tanda kutip di bawah).
-const DEFAULT_SCRIPT_URL = '';
+    const fDate = ref(''); const fDana = ref('0'); const fEquity = ref(''); const fDividen = ref('0'); const fIhsg = ref('');
+    const wKode = ref(''); const wNama = ref(''); const wEps = ref(''); const wPe = ref('');
+    const scriptUrlInput = ref(localStorage.getItem('apps-script-url') || '');
 
-function getScriptUrl(){
-  return (DEFAULT_SCRIPT_URL || '').trim() || (localStorage.getItem('apps-script-url') || '').trim();
-}
-function setScriptUrl(url){
-  localStorage.setItem('apps-script-url', url.trim());
-}
-let syncStatus = { connected: !!getScriptUrl(), state:'idle', message:'' }; // state: idle|loading|saving|error
+    const fmtRp = n => 'Rp' + Math.round(n).toLocaleString('id-ID');
+    const fmtPct = n => (n===null||n===undefined||isNaN(n)) ? '—' : (n>=0?'+':'') + (n*100).toFixed(2) + '%';
+    const fmtDate = s => { const d = new Date(s+'T00:00:00'); return d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}); };
+    const fmtMonth = s => { const d = new Date(s+'T00:00:00'); return d.toLocaleDateString('id-ID',{month:'long',year:'numeric'}); };
+    const pctColor = v => v===null||v===undefined ? 'text-slate-400' : (v>=0 ? 'text-emerald-400' : 'text-rose-400');
+    const cagrColor = v => v===null||v===undefined ? 'text-slate-500' : (v>=0 ? 'text-emerald-400' : 'text-rose-400');
 
-function toApiPortfolioRow(r){
-  return { id:r.id, tanggal:r.date, dana:r.dana, dividen:r.dividen||0, equity:r.equity, ihsg:r.ihsg };
-}
-function fromApiPortfolioRow(r){
-  return { id:String(r.id), date:String(r.tanggal), dana:Number(r.dana)||0, dividen:Number(r.dividen)||0, equity:Number(r.equity)||0, ihsg:Number(r.ihsg)||0 };
-}
-function fromApiWatchlistRow(r){
-  return {
-    id:String(r.id), kode:String(r.kode||'').toUpperCase(), nama:r.nama||'',
-    eps:Number(r.eps)||0, peMean:Number(r.peMean)||0, price:Number(r.price)||0,
-    hargaWajar:Number(r.hargaWajar)||0, mos:Number(r.mos)||0,
-    status:r.status||'', action:r.action||'', updatedAt:r.updatedAt||''
-  };
-}
+    const hasClaudeStorage = (typeof window.storage !== 'undefined');
 
-async function loadData(){
-  const url = getScriptUrl();
-  if(url){
-    syncStatus = {connected:true, state:'loading', message:'Memuat data dari Google Sheets…'};
-    renderSyncStatus();
-    try{
-      const res = await fetch(url);
-      const json = await res.json();
-      if(json.ok){
-        rows = (json.portfolio||[]).map(fromApiPortfolioRow);
-        watchlist = (json.watchlist||[]).map(fromApiWatchlistRow);
-        localStorage.setItem('nav-tracker-data-cache', JSON.stringify(rows));
-        localStorage.setItem('watchlist-cache', JSON.stringify(watchlist));
-        syncStatus = {connected:true, state:'idle', message:'Tersambung ke Google Sheets.'};
-      } else {
-        throw new Error(json.error || 'Respons tidak valid');
-      }
-    }catch(e){
-      console.error('Gagal memuat dari Google Sheets', e);
-      const cached = localStorage.getItem('nav-tracker-data-cache');
-      const cachedW = localStorage.getItem('watchlist-cache');
-      rows = cached ? JSON.parse(cached) : [];
-      watchlist = cachedW ? JSON.parse(cachedW) : [];
-      syncStatus = {connected:true, state:'error', message:'Gagal terhubung ke Google Sheets. Menampilkan data cache terakhir di perangkat ini.'};
+    // ---------- Google Sheets (Apps Script) sebagai database pusat ----------
+    const DEFAULT_SCRIPT_URL = '';
+    function getScriptUrl(){
+      return (DEFAULT_SCRIPT_URL || '').trim() || (localStorage.getItem('apps-script-url') || '').trim();
     }
-  } else {
-    // mode lokal (belum dikonfigurasi ke Google Sheets)
-    try{
-      if(hasClaudeStorage){
-        const r = await window.storage.get('nav-tracker-data', false);
-        rows = (r && r.value) ? JSON.parse(r.value) : [];
-        const w = await window.storage.get('watchlist-data', false);
-        watchlist = (w && w.value) ? JSON.parse(w.value) : [];
-      } else {
-        const raw = localStorage.getItem('nav-tracker-data');
-        rows = raw ? JSON.parse(raw) : [];
-        const rawW = localStorage.getItem('watchlist-data');
-        watchlist = rawW ? JSON.parse(rawW) : [];
-      }
-    }catch(e){ rows = []; watchlist = []; }
-    syncStatus = {connected:false, state:'idle', message:'Mode lokal — data hanya tersimpan di perangkat/browser ini. Sambungkan ke Google Sheets di tab Pengaturan supaya terpusat.'};
-  }
-  loaded = true;
-  renderAll();
-}
+    function setScriptUrl(url){
+      localStorage.setItem('apps-script-url', url.trim());
+    }
+    const syncStatus = reactive({ connected: !!getScriptUrl(), state:'idle', message:'' });
 
-async function saveData(){
-  localStorage.setItem('nav-tracker-data-cache', JSON.stringify(rows));
-  const url = getScriptUrl();
-  if(url){
-    syncStatus = {connected:true, state:'saving', message:'Menyimpan ke Google Sheets…'};
-    renderSyncStatus();
-    try{
-      const res = await fetch(url, {
-        method:'POST',
-        headers:{'Content-Type':'text/plain;charset=utf-8'}, // hindari CORS preflight ke Apps Script
-        body: JSON.stringify({action:'savePortfolio', rows: rows.map(toApiPortfolioRow)})
+    function toApiPortfolioRow(r){
+      return { id:r.id, tanggal:r.date, dana:r.dana, dividen:r.dividen||0, equity:r.equity, ihsg:r.ihsg };
+    }
+    function fromApiPortfolioRow(r){
+      return { id:String(r.id), date:String(r.tanggal), dana:Number(r.dana)||0, dividen:Number(r.dividen)||0, equity:Number(r.equity)||0, ihsg:Number(r.ihsg)||0 };
+    }
+    function fromApiWatchlistRow(r){
+      return {
+        id:String(r.id), kode:String(r.kode||'').toUpperCase(), nama:r.nama||'',
+        eps:Number(r.eps)||0, peMean:Number(r.peMean)||0, price:Number(r.price)||0,
+        hargaWajar:Number(r.hargaWajar)||0, mos:Number(r.mos)||0,
+        status:r.status||'', action:r.action||'', updatedAt:r.updatedAt||''
+      };
+    }
+
+    async function loadData(){
+      const url = getScriptUrl();
+      if(url){
+        syncStatus.connected = true; syncStatus.state='loading'; syncStatus.message='Memuat data dari Google Sheets…';
+        try{
+          const res = await fetch(url);
+          const json = await res.json();
+          if(json.ok){
+            rows.value = (json.portfolio||[]).map(fromApiPortfolioRow);
+            watchlist.value = (json.watchlist||[]).map(fromApiWatchlistRow);
+            localStorage.setItem('nav-tracker-data-cache', JSON.stringify(rows.value));
+            localStorage.setItem('watchlist-cache', JSON.stringify(watchlist.value));
+            syncStatus.state='idle'; syncStatus.message='Tersambung ke Google Sheets.';
+          } else {
+            throw new Error(json.error || 'Respons tidak valid');
+          }
+        }catch(e){
+          console.error('Gagal memuat dari Google Sheets', e);
+          const cached = localStorage.getItem('nav-tracker-data-cache');
+          const cachedW = localStorage.getItem('watchlist-cache');
+          rows.value = cached ? JSON.parse(cached) : [];
+          watchlist.value = cachedW ? JSON.parse(cachedW) : [];
+          syncStatus.state='error'; syncStatus.message='Gagal terhubung ke Google Sheets. Menampilkan data cache terakhir di perangkat ini.';
+        }
+      } else {
+        try{
+          if(hasClaudeStorage){
+            const r = await window.storage.get('nav-tracker-data', false);
+            rows.value = (r && r.value) ? JSON.parse(r.value) : [];
+            const w = await window.storage.get('watchlist-data', false);
+            watchlist.value = (w && w.value) ? JSON.parse(w.value) : [];
+          } else {
+            const raw = localStorage.getItem('nav-tracker-data');
+            rows.value = raw ? JSON.parse(raw) : [];
+            const rawW = localStorage.getItem('watchlist-data');
+            watchlist.value = rawW ? JSON.parse(rawW) : [];
+          }
+        }catch(e){ rows.value = []; watchlist.value = []; }
+        syncStatus.connected = false; syncStatus.state='idle';
+        syncStatus.message = 'Mode lokal — data hanya tersimpan di perangkat/browser ini. Sambungkan ke Google Sheets di tab Pengaturan supaya terpusat.';
+      }
+      loaded.value = true;
+    }
+
+    async function saveData(){
+      localStorage.setItem('nav-tracker-data-cache', JSON.stringify(rows.value));
+      const url = getScriptUrl();
+      if(url){
+        syncStatus.connected = true; syncStatus.state='saving'; syncStatus.message='Menyimpan ke Google Sheets…';
+        try{
+          const res = await fetch(url, {
+            method:'POST',
+            headers:{'Content-Type':'text/plain;charset=utf-8'},
+            body: JSON.stringify({action:'savePortfolio', rows: rows.value.map(toApiPortfolioRow)})
+          });
+          const json = await res.json();
+          if(json.ok){
+            rows.value = (json.portfolio||[]).map(fromApiPortfolioRow);
+            syncStatus.state='idle'; syncStatus.message='Tersimpan ke Google Sheets.';
+          } else { throw new Error(json.error || 'Gagal menyimpan'); }
+        }catch(e){
+          console.error('Gagal menyimpan ke Google Sheets', e);
+          syncStatus.state='error'; syncStatus.message='Gagal menyimpan ke Google Sheets. Perubahan disimpan sementara di perangkat ini saja.';
+        }
+      } else {
+        try{
+          if(hasClaudeStorage){ await window.storage.set('nav-tracker-data', JSON.stringify(rows.value), false); }
+          else { localStorage.setItem('nav-tracker-data', JSON.stringify(rows.value)); }
+        }catch(e){ console.error('Gagal menyimpan', e); }
+      }
+    }
+
+    function computeWatchlistRowLocal(r){
+      const eps = Number(r.eps)||0;
+      const peMean = Number(r.peMean)||0;
+      const price = Number(r.price)||0;
+      const hargaWajar = eps*peMean;
+      const mos = hargaWajar>0 ? (hargaWajar-price)/hargaWajar : 0;
+      const status = mos>=0.3 ? 'Beli' : 'Mahal';
+      const action = (hargaWajar>0 && price>=hargaWajar) ? 'Jual' : 'Hold';
+      return {...r, eps, peMean, price, hargaWajar, mos, status, action};
+    }
+
+    async function saveWatchlist(){
+      watchlist.value = watchlist.value.map(computeWatchlistRowLocal);
+      localStorage.setItem('watchlist-cache', JSON.stringify(watchlist.value));
+      const url = getScriptUrl();
+      if(url){
+        syncStatus.connected = true; syncStatus.state='saving'; syncStatus.message='Menyimpan watchlist ke Google Sheets…';
+        try{
+          const res = await fetch(url, {
+            method:'POST',
+            headers:{'Content-Type':'text/plain;charset=utf-8'},
+            body: JSON.stringify({action:'saveWatchlist', rows: watchlist.value})
+          });
+          const json = await res.json();
+          if(json.ok){
+            watchlist.value = (json.watchlist||[]).map(fromApiWatchlistRow);
+            syncStatus.state='idle'; syncStatus.message='Watchlist tersimpan ke Google Sheets.';
+          } else { throw new Error(json.error || 'Gagal menyimpan'); }
+        }catch(e){
+          console.error('Gagal menyimpan watchlist', e);
+          syncStatus.state='error'; syncStatus.message='Gagal menyimpan watchlist ke Google Sheets.';
+        }
+      } else {
+        try{
+          if(hasClaudeStorage){ await window.storage.set('watchlist-data', JSON.stringify(watchlist.value), false); }
+          else { localStorage.setItem('watchlist-data', JSON.stringify(watchlist.value)); }
+        }catch(e){ console.error('Gagal menyimpan watchlist', e); }
+      }
+    }
+
+    async function refreshPrices(){
+      const url = getScriptUrl();
+      if(!url){
+        syncStatus.connected = false; syncStatus.state='error';
+        syncStatus.message = 'Ambil harga otomatis butuh koneksi ke Google Sheets (Apps Script) — sambungkan dulu di tab Pengaturan.';
+        return;
+      }
+      syncStatus.connected = true; syncStatus.state='saving'; syncStatus.message='Mengambil harga terbaru dari Yahoo Finance…';
+      try{
+        const res = await fetch(url, {
+          method:'POST',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify({action:'refreshPrices'})
+        });
+        const json = await res.json();
+        if(json.ok){
+          watchlist.value = (json.watchlist||[]).map(fromApiWatchlistRow);
+          syncStatus.state='idle'; syncStatus.message='Harga berhasil diperbarui.';
+        } else { throw new Error(json.error || 'Gagal mengambil harga'); }
+      }catch(e){
+        console.error('Gagal refresh harga', e);
+        syncStatus.state='error'; syncStatus.message='Gagal mengambil harga terbaru.';
+      }
+    }
+
+    async function connectScript(){
+      setScriptUrl(scriptUrlInput.value.trim());
+      await loadData();
+    }
+
+    // ---------- mesin perhitungan NAB ----------
+    function compute(){
+      const sorted = [...rows.value].sort((a,b)=> a.date.localeCompare(b.date));
+      let unitPrev = 0, nabPrev = 1000, ihsgPrev = null;
+      const out = [];
+      sorted.forEach((r,i)=>{
+        const dana = Number(r.dana)||0;
+        const dividen = Number(r.dividen)||0;
+        const equity = Number(r.equity)||0;
+        const ihsg = Number(r.ihsg)||0;
+        const baseNab = i===0 ? 1000 : nabPrev;
+        const newUnit = baseNab>0 ? dana/baseNab : 0;
+        const totalUnit = unitPrev + newUnit;
+        const nab = totalUnit>0 ? equity/totalUnit : 1000;
+        const nabPct = i===0 ? null : (nabPrev>0 ? nab/nabPrev-1 : null);
+        const ihsgPct = i===0 ? null : (ihsgPrev>0 ? ihsg/ihsgPrev-1 : null);
+        out.push({...r, dana, dividen, equity, ihsg, newUnit, totalUnit, nab, nabPct, ihsgPct});
+        unitPrev = totalUnit; nabPrev = nab; ihsgPrev = ihsg;
       });
-      const json = await res.json();
-      if(json.ok){
-        rows = (json.portfolio||[]).map(fromApiPortfolioRow);
-        syncStatus = {connected:true, state:'idle', message:'Tersimpan ke Google Sheets.'};
-      } else {
-        throw new Error(json.error || 'Gagal menyimpan');
+      return out;
+    }
+
+    function xirr(cashflows){
+      if(cashflows.length < 2) return null;
+      const hasPos = cashflows.some(c=>c.amount>0);
+      const hasNeg = cashflows.some(c=>c.amount<0);
+      if(!hasPos || !hasNeg) return null;
+      const d0 = cashflows[0].date;
+      const yrs = d => (d - d0)/(365*86400000);
+      let rate = 0.15;
+      for(let iter=0; iter<200; iter++){
+        let f=0, df=0;
+        for(const cf of cashflows){
+          const t = yrs(cf.date);
+          const denom = Math.pow(1+rate, t);
+          f += cf.amount/denom;
+          df += -t*cf.amount/Math.pow(1+rate, t+1);
+        }
+        if(Math.abs(df) < 1e-10) break;
+        const next = rate - f/df;
+        if(!isFinite(next)) return null;
+        if(Math.abs(next-rate) < 1e-8){ rate = next; break; }
+        rate = Math.max(-0.99, next);
       }
-    }catch(e){
-      console.error('Gagal menyimpan ke Google Sheets', e);
-      syncStatus = {connected:true, state:'error', message:'Gagal menyimpan ke Google Sheets. Perubahan disimpan sementara di perangkat ini saja.'};
+      return isFinite(rate) ? rate : null;
     }
-  } else {
-    try{
-      if(hasClaudeStorage){ await window.storage.set('nav-tracker-data', JSON.stringify(rows), false); }
-      else { localStorage.setItem('nav-tracker-data', JSON.stringify(rows)); }
-    }catch(e){ console.error('Gagal menyimpan', e); }
-  }
-  renderSyncStatus();
-}
 
-function computeWatchlistRowLocal(r){
-  const eps = Number(r.eps)||0;
-  const peMean = Number(r.peMean)||0;
-  const price = Number(r.price)||0;
-  const hargaWajar = eps*peMean;
-  const mos = hargaWajar>0 ? (hargaWajar-price)/hargaWajar : 0;
-  const status = mos>=0.3 ? 'Beli' : 'Mahal';
-  const action = (hargaWajar>0 && price>=hargaWajar) ? 'Jual' : 'Hold';
-  return {...r, eps, peMean, price, hargaWajar, mos, status, action};
-}
-
-async function saveWatchlist(){
-  watchlist = watchlist.map(computeWatchlistRowLocal);
-  localStorage.setItem('watchlist-cache', JSON.stringify(watchlist));
-  const url = getScriptUrl();
-  if(url){
-    syncStatus = {connected:true, state:'saving', message:'Menyimpan watchlist ke Google Sheets…'};
-    renderSyncStatus();
-    try{
-      const res = await fetch(url, {
-        method:'POST',
-        headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body: JSON.stringify({action:'saveWatchlist', rows: watchlist})
+    function computeCAGR(computedArr){
+      if(computedArr.length < 2) return {equity:null, nab:null, ihsg:null};
+      const first = computedArr[0], last = computedArr[computedArr.length-1];
+      const days = (new Date(last.date+'T00:00:00') - new Date(first.date+'T00:00:00'))/86400000;
+      let nabCAGR = null, ihsgCAGR = null;
+      if(days > 0){
+        nabCAGR = Math.pow(last.nab/1000, 365/days) - 1;
+        if(first.ihsg > 0) ihsgCAGR = Math.pow(last.ihsg/first.ihsg, 365/days) - 1;
+      }
+      const cashflows = computedArr.map((r,i)=>{
+        let amt = -r.dana;
+        if(i===computedArr.length-1) amt += r.equity;
+        return {date:new Date(r.date+'T00:00:00'), amount:amt};
       });
-      const json = await res.json();
-      if(json.ok){
-        watchlist = (json.watchlist||[]).map(fromApiWatchlistRow);
-        syncStatus = {connected:true, state:'idle', message:'Watchlist tersimpan ke Google Sheets.'};
-      } else { throw new Error(json.error || 'Gagal menyimpan'); }
-    }catch(e){
-      console.error('Gagal menyimpan watchlist', e);
-      syncStatus = {connected:true, state:'error', message:'Gagal menyimpan watchlist ke Google Sheets.'};
+      const equityCAGR = xirr(cashflows);
+      return {equity:equityCAGR, nab:nabCAGR, ihsg:ihsgCAGR};
     }
-  } else {
-    try{
-      if(hasClaudeStorage){ await window.storage.set('watchlist-data', JSON.stringify(watchlist), false); }
-      else { localStorage.setItem('watchlist-data', JSON.stringify(watchlist)); }
-    }catch(e){ console.error('Gagal menyimpan watchlist', e); }
-  }
-  renderSyncStatus();
-}
 
-async function refreshPrices(){
-  const url = getScriptUrl();
-  if(!url){
-    syncStatus = {connected:false, state:'error', message:'Ambil harga otomatis butuh koneksi ke Google Sheets (Apps Script) — sambungkan dulu di tab Pengaturan.'};
-    renderSyncStatus();
-    return;
-  }
-  syncStatus = {connected:true, state:'saving', message:'Mengambil harga terbaru dari Yahoo Finance…'};
-  renderSyncStatus();
-  try{
-    const res = await fetch(url, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({action:'refreshPrices'})
+    // ---------- filter per tahun ----------
+    function getYearOf(dateStr){ return new Date(dateStr+'T00:00:00').getFullYear(); }
+    function getAvailableYears(computedArr){
+      const yrs = new Set(computedArr.map(r=>getYearOf(r.date)));
+      return [...yrs].sort((a,b)=>b-a);
+    }
+    function getYearSlice(computedArr, year){
+      const yearRows = computedArr.filter(r => getYearOf(r.date) === year);
+      if(yearRows.length===0) return [];
+      const idxFirst = computedArr.findIndex(r=>r.id===yearRows[0].id);
+      if(idxFirst > 0) return [computedArr[idxFirst-1], ...yearRows];
+      return yearRows;
+    }
+    function getYearStats(computedArr, year){
+      const slice = getYearSlice(computedArr, year);
+      if(slice.length===0) return null;
+      const first = slice[0], last = slice[slice.length-1];
+      const yearOnlyRows = computedArr.filter(r=>getYearOf(r.date)===year);
+      const nabReturn = first.nab>0 ? last.nab/first.nab - 1 : null;
+      const ihsgReturn = first.ihsg>0 ? last.ihsg/first.ihsg - 1 : null;
+      const totalDana = yearOnlyRows.reduce((a,r)=>a+r.dana,0);
+      const totalDividen = yearOnlyRows.reduce((a,r)=>a+(r.dividen||0),0);
+      return {slice, nabReturn, ihsgReturn, totalDana, totalDividen, equityEnd:last.equity, equityStart:first.equity};
+    }
+
+    function buildChart(computedArr){
+      const w = 500, h = 170, padL = 34, padR = 8, padT = 10, padB = 22;
+      const cw = w - padL - padR, ch = h - padT - padB;
+      const ihsg0 = computedArr[0].ihsg || 1;
+      const points = computedArr.map(r=>({date:r.date, nab:r.nab, ihsgIdx: (r.ihsg/ihsg0)*1000}));
+      const maxY = Math.max(...points.map(p=>Math.max(p.nab,p.ihsgIdx)), 1000);
+      const minY = Math.min(...points.map(p=>Math.min(p.nab,p.ihsgIdx)), 1000);
+      const range = (maxY-minY) || 1;
+
+      const x = i => padL + (points.length===1 ? cw/2 : (i/(points.length-1))*cw);
+      const y = v => padT + ch - ((v-minY)/range)*ch;
+
+      const linePath = key => points.map((p,i)=> (i===0?'M':'L') + x(i).toFixed(1) + ',' + y(p[key]).toFixed(1)).join(' ');
+
+      const gridLines = [0,0.5,1].map(f=>{
+        const val = minY + f*range;
+        const yy = padT + ch - f*ch;
+        return `<line x1="${padL}" y1="${yy}" x2="${w-padR}" y2="${yy}" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+        <text x="${padL-6}" y="${yy+3}" font-size="9" fill="rgba(226,232,230,.45)" text-anchor="end" font-family="Inter">${val.toFixed(0)}</text>`;
+      }).join('');
+
+      const labelStep = points.length > 6 ? Math.ceil(points.length/6) : 1;
+      const labels = points.map((p,i)=> (i%labelStep===0 || i===points.length-1) ?
+        `<text x="${x(i).toFixed(1)}" y="${h-4}" font-size="9" fill="rgba(226,232,230,.45)" text-anchor="middle" font-family="Inter">${shortMonth(p.date)}</text>` : '').join('');
+
+      const dotsNab = points.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p.nab).toFixed(1)}" r="3" fill="#34D399"/>`).join('');
+      const dotsIhsg = points.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p.ihsgIdx).toFixed(1)}" r="3" fill="#FBBF24"/>`).join('');
+
+      return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
+        ${gridLines}
+        <path d="${linePath('ihsgIdx')}" fill="none" stroke="#FBBF24" stroke-width="2" stroke-dasharray="4,3"/>
+        <path d="${linePath('nab')}" fill="none" stroke="#34D399" stroke-width="2.5"/>
+        ${dotsIhsg}
+        ${dotsNab}
+        ${labels}
+      </svg>`;
+    }
+    function shortMonth(dateStr){
+      const d = new Date(dateStr+'T00:00:00');
+      return d.toLocaleDateString('id-ID',{month:'short',year:'2-digit'});
+    }
+
+    // ---------- computed (reaktif, dipakai di template) ----------
+    const computedRows = computed(()=> compute());
+    const reversedComputedRows = computed(()=> [...computedRows.value].reverse());
+    const lastRow = computed(()=> computedRows.value[computedRows.value.length-1] || null);
+    const totalReturn = computed(()=> lastRow.value ? lastRow.value.nab/1000 - 1 : 0);
+    const cagr = computed(()=> computeCAGR(computedRows.value));
+    const totalDividenAllTime = computed(()=> computedRows.value.reduce((a,r)=>a+(r.dividen||0),0));
+    const years = computed(()=> getAvailableYears(computedRows.value));
+    const activeComputed = computed(()=> yearFilter.value==='all' ? computedRows.value : getYearSlice(computedRows.value, parseInt(yearFilter.value)));
+    const yearStats = computed(()=> yearFilter.value==='all' ? null : getYearStats(computedRows.value, parseInt(yearFilter.value)));
+    const prevYearStats = computed(()=> yearFilter.value==='all' ? null : getYearStats(computedRows.value, parseInt(yearFilter.value)-1));
+    const chartSvg = computed(()=> activeComputed.value.length>=2 ? buildChart(activeComputed.value) : '');
+    const monthlyPerf = computed(()=> [...activeComputed.value.slice(1)].reverse());
+
+    const editingEntry = computed(()=> editingId.value ? rows.value.find(r=>r.id===editingId.value) : null);
+    const editingWatch = computed(()=> editingWatchId.value ? watchlist.value.find(w=>w.id===editingWatchId.value) : null);
+    const sortedWatchlist = computed(()=> [...watchlist.value].sort((a,b)=>b.mos-a.mos));
+    const totalBeli = computed(()=> watchlist.value.filter(w=>w.status==='Beli').length);
+    const lastPriceUpdateLabel = computed(()=>{
+      const withUpdate = watchlist.value.find(w=>w.updatedAt);
+      return withUpdate ? fmtDate(withUpdate.updatedAt.slice(0,10)) : 'belum pernah';
     });
-    const json = await res.json();
-    if(json.ok){
-      watchlist = (json.watchlist||[]).map(fromApiWatchlistRow);
-      syncStatus = {connected:true, state:'idle', message:'Harga berhasil diperbarui.'};
-    } else { throw new Error(json.error || 'Gagal mengambil harga'); }
-  }catch(e){
-    console.error('Gagal refresh harga', e);
-    syncStatus = {connected:true, state:'error', message:'Gagal mengambil harga terbaru.'};
-  }
-  renderAll();
-}
 
-function renderSyncStatus(){
-  const el = document.getElementById('sync-status');
-  if(!el) return;
-  const color = syncStatus.state==='error' ? 'var(--loss)' : (syncStatus.connected ? 'var(--gain)' : 'var(--ink-muted)');
-  el.style.color = color;
-  el.textContent = syncStatus.message;
-}
-
-// ---------- mesin perhitungan NAB ----------
-function compute(){
-  const sorted = [...rows].sort((a,b)=> a.date.localeCompare(b.date));
-  let unitPrev = 0, nabPrev = 1000, ihsgPrev = null;
-  const out = [];
-  sorted.forEach((r,i)=>{
-    const dana = Number(r.dana)||0;
-    const dividen = Number(r.dividen)||0;
-    const equity = Number(r.equity)||0;
-    const ihsg = Number(r.ihsg)||0;
-    const baseNab = i===0 ? 1000 : nabPrev;
-    const newUnit = baseNab>0 ? dana/baseNab : 0;
-    const totalUnit = unitPrev + newUnit;
-    const nab = totalUnit>0 ? equity/totalUnit : 1000;
-    const nabPct = i===0 ? null : (nabPrev>0 ? nab/nabPrev-1 : null);
-    const ihsgPct = i===0 ? null : (ihsgPrev>0 ? ihsg/ihsgPrev-1 : null);
-    out.push({...r, dana, dividen, equity, ihsg, newUnit, totalUnit, nab, nabPct, ihsgPct});
-    unitPrev = totalUnit; nabPrev = nab; ihsgPrev = ihsg;
-  });
-  return out;
-}
-
-function xirr(cashflows){
-  if(cashflows.length < 2) return null;
-  const hasPos = cashflows.some(c=>c.amount>0);
-  const hasNeg = cashflows.some(c=>c.amount<0);
-  if(!hasPos || !hasNeg) return null;
-  const d0 = cashflows[0].date;
-  const yrs = d => (d - d0)/(365*86400000);
-  let rate = 0.15;
-  for(let iter=0; iter<200; iter++){
-    let f=0, df=0;
-    for(const cf of cashflows){
-      const t = yrs(cf.date);
-      const denom = Math.pow(1+rate, t);
-      f += cf.amount/denom;
-      df += -t*cf.amount/Math.pow(1+rate, t+1);
+    // ---------- form watch: sinkron saat masuk mode edit ----------
+    function syncEntryForm(){
+      const e = editingEntry.value;
+      fDate.value = e ? e.date : '';
+      fDana.value = e ? String(e.dana) : '0';
+      fEquity.value = e ? String(e.equity) : '';
+      fDividen.value = e ? String(e.dividen||0) : '0';
+      fIhsg.value = e ? String(e.ihsg) : '';
     }
-    if(Math.abs(df) < 1e-10) break;
-    const next = rate - f/df;
-    if(!isFinite(next)) return null;
-    if(Math.abs(next-rate) < 1e-8){ rate = next; break; }
-    rate = Math.max(-0.99, next);
-  }
-  return isFinite(rate) ? rate : null;
-}
-
-function computeCAGR(computed){
-  if(computed.length < 2) return {equity:null, nab:null, ihsg:null};
-  const first = computed[0], last = computed[computed.length-1];
-  const days = (new Date(last.date+'T00:00:00') - new Date(first.date+'T00:00:00'))/86400000;
-  let nabCAGR = null, ihsgCAGR = null;
-  if(days > 0){
-    nabCAGR = Math.pow(last.nab/1000, 365/days) - 1;
-    if(first.ihsg > 0) ihsgCAGR = Math.pow(last.ihsg/first.ihsg, 365/days) - 1;
-  }
-  const cashflows = computed.map((r,i)=>{
-    let amt = -r.dana;
-    if(i===computed.length-1) amt += r.equity;
-    return {date:new Date(r.date+'T00:00:00'), amount:amt};
-  });
-  const equityCAGR = xirr(cashflows);
-  return {equity:equityCAGR, nab:nabCAGR, ihsg:ihsgCAGR};
-}
-
-// ---------- filter per tahun ----------
-function getYearOf(dateStr){ return new Date(dateStr+'T00:00:00').getFullYear(); }
-
-function getAvailableYears(computed){
-  const years = new Set(computed.map(r=>getYearOf(r.date)));
-  return [...years].sort((a,b)=>b-a);
-}
-
-// Mengembalikan subset computed untuk tahun tertentu, disisipi 1 baris baseline
-// (entri terakhir sebelum tahun itu) supaya grafik & return dihitung relatif ke awal tahun.
-function getYearSlice(computed, year){
-  const yearRows = computed.filter(r => getYearOf(r.date) === year);
-  if(yearRows.length===0) return [];
-  const idxFirst = computed.findIndex(r=>r.id===yearRows[0].id);
-  if(idxFirst > 0) return [computed[idxFirst-1], ...yearRows];
-  return yearRows;
-}
-
-function getYearStats(computed, year){
-  const slice = getYearSlice(computed, year);
-  if(slice.length===0) return null;
-  const first = slice[0], last = slice[slice.length-1];
-  const yearOnlyRows = computed.filter(r=>getYearOf(r.date)===year);
-  const nabReturn = first.nab>0 ? last.nab/first.nab - 1 : null;
-  const ihsgReturn = first.ihsg>0 ? last.ihsg/first.ihsg - 1 : null;
-  const totalDana = yearOnlyRows.reduce((a,r)=>a+r.dana,0);
-  const totalDividen = yearOnlyRows.reduce((a,r)=>a+(r.dividen||0),0);
-  return {slice, nabReturn, ihsgReturn, totalDana, totalDividen, equityEnd:last.equity, equityStart:first.equity};
-}
-
-// ---------- render ringkasan ----------
-function renderRingkasan(){
-  const el = document.getElementById('view-ringkasan');
-  const computed = compute();
-  if(computed.length===0){
-    el.innerHTML = `<div class="card"><div class="empty">Belum ada data.<br>Tambahkan setoran awal di tab "Input &amp; Riwayat".</div></div>`;
-    return;
-  }
-  const last = computed[computed.length-1];
-  const totalReturn = last.nab/1000 - 1;
-  const cagr = computeCAGR(computed);
-  const totalDividenAllTime = computed.reduce((a,r)=>a+(r.dividen||0),0);
-  const years = getAvailableYears(computed);
-
-  const activeComputed = yearFilter==='all' ? computed : getYearSlice(computed, parseInt(yearFilter));
-  const yearStats = yearFilter==='all' ? null : getYearStats(computed, parseInt(yearFilter));
-  const prevYearStats = yearFilter==='all' ? null : getYearStats(computed, parseInt(yearFilter)-1);
-
-  el.innerHTML = `
-    <div class="hero">
-      <p class="label">Nilai portofolio saat ini</p>
-      <p class="value">${fmtRp(last.equity)}</p>
-      <div class="sub">
-        <div><p class="k">NAB saat ini</p><p class="v">${fmtRp(last.nab)}</p></div>
-        <div><p class="k">Return kumulatif</p><p class="v" style="color:${totalReturn>=0?'#8FD1AC':'#F0AF97'}">${fmtPct(totalReturn)}</p></div>
-        <div><p class="k">Per ${fmtDate(last.date)}</p><p class="v">${computed.length} entri</p></div>
-      </div>
-    </div>
-
-    <div class="cagr-grid">
-      <div class="cagr-box">
-        <p class="t">CAGR Equity<br>(money-weighted)</p>
-        <p class="n" style="color:${cagr.equity===null?'var(--ink-muted)':(cagr.equity>=0?'var(--gain)':'var(--loss)')}">${cagr.equity===null?'—':fmtPct(cagr.equity)}</p>
-      </div>
-      <div class="cagr-box">
-        <p class="t">CAGR NAB<br>(time-weighted)</p>
-        <p class="n" style="color:${cagr.nab===null?'var(--ink-muted)':(cagr.nab>=0?'var(--gain)':'var(--loss)')}">${cagr.nab===null?'—':fmtPct(cagr.nab)}</p>
-      </div>
-      <div class="cagr-box">
-        <p class="t">CAGR IHSG<br>(benchmark)</p>
-        <p class="n" style="color:${cagr.ihsg===null?'var(--ink-muted)':(cagr.ihsg>=0?'var(--gain)':'var(--loss)')}">${cagr.ihsg===null?'—':fmtPct(cagr.ihsg)}</p>
-      </div>
-    </div>
-
-    <div class="cagr-grid">
-      <div class="cagr-box" style="flex:1;">
-        <p class="t">Total Dividen Diterima<br>(sepanjang waktu)</p>
-        <p class="n" style="color:var(--accent2)">${fmtRp(totalDividenAllTime)}</p>
-      </div>
-    </div>
-
-    ${years.length>1 ? `
-    <div class="year-filter">
-      <label>Lihat tahun:</label>
-      <select id="year-select">
-        <option value="all" ${yearFilter==='all'?'selected':''}>Semua Tahun</option>
-        ${years.map(y=>`<option value="${y}" ${yearFilter==String(y)?'selected':''}>${y}</option>`).join('')}
-      </select>
-    </div>
-    ` : ''}
-
-    ${yearStats ? `
-    <div class="card">
-      <h2>Performa ${yearFilter}</h2>
-      <p class="desc">Dibandingkan dengan tahun ${parseInt(yearFilter)-1}${prevYearStats?'':' (tidak ada data)'}.</p>
-      <div class="compare-grid">
-        <div class="compare-col">
-          <p class="yr">${yearFilter}</p>
-          <div class="compare-row"><span class="k">Return NAB</span><span class="v" style="color:${yearStats.nabReturn>=0?'var(--gain)':'var(--loss)'}">${fmtPct(yearStats.nabReturn)}</span></div>
-          <div class="compare-row"><span class="k">Return IHSG</span><span class="v" style="color:${yearStats.ihsgReturn>=0?'var(--gain)':'var(--loss)'}">${fmtPct(yearStats.ihsgReturn)}</span></div>
-          <div class="compare-row"><span class="k">Setoran</span><span class="v">${fmtRp(yearStats.totalDana)}</span></div>
-          <div class="compare-row"><span class="k">Dividen</span><span class="v">${fmtRp(yearStats.totalDividen)}</span></div>
-        </div>
-        <div class="compare-col">
-          <p class="yr">${parseInt(yearFilter)-1}</p>
-          ${prevYearStats ? `
-          <div class="compare-row"><span class="k">Return NAB</span><span class="v" style="color:${prevYearStats.nabReturn>=0?'var(--gain)':'var(--loss)'}">${fmtPct(prevYearStats.nabReturn)}</span></div>
-          <div class="compare-row"><span class="k">Return IHSG</span><span class="v" style="color:${prevYearStats.ihsgReturn>=0?'var(--gain)':'var(--loss)'}">${fmtPct(prevYearStats.ihsgReturn)}</span></div>
-          <div class="compare-row"><span class="k">Setoran</span><span class="v">${fmtRp(prevYearStats.totalDana)}</span></div>
-          <div class="compare-row"><span class="k">Dividen</span><span class="v">${fmtRp(prevYearStats.totalDividen)}</span></div>
-          ` : `<p class="note" style="margin-top:0;">Belum ada data.</p>`}
-        </div>
-      </div>
-    </div>
-    ` : ''}
-
-    <div class="card">
-      <h2>NAB vs IHSG (rebased ke 1000)</h2>
-      <p class="desc">Membandingkan kinerja murni investasi Anda terhadap IHSG, tidak terpengaruh besar/kecilnya setoran.</p>
-      ${activeComputed.length>=2 ? `
-        <div class="chart-wrap">${buildChart(activeComputed)}</div>
-        <div class="legend">
-          <span><span class="dot" style="background:#1F3D34"></span>NAB Anda</span>
-          <span><span class="dot" style="background:#9A8148"></span>IHSG</span>
-        </div>
-      ` : `<div class="empty">Tambahkan minimal 2 entri untuk melihat grafik.</div>`}
-    </div>
-
-    <div class="card">
-      <h2>Kinerja bulanan vs IHSG</h2>
-      ${activeComputed.slice(1).reverse().map(r=>{
-        const diff = (r.nabPct||0) - (r.ihsgPct||0);
-        return `<div class="row-item">
-          <div>
-            <div class="m">${fmtMonth(r.date)}</div>
-            <div class="meta">NAB ${fmtPct(r.nabPct)} &middot; IHSG ${fmtPct(r.ihsgPct)}</div>
-          </div>
-          <div class="pill ${diff>=0?'gain':'loss'}">${diff>=0?'Unggul ':'Kalah '}${fmtPct(Math.abs(diff)).replace('+','')}</div>
-        </div>`;
-      }).join('') || `<div class="empty">Belum ada data bulanan.</div>`}
-    </div>
-  `;
-
-  const yearSelect = document.getElementById('year-select');
-  if(yearSelect) yearSelect.addEventListener('change', e=>{ yearFilter = e.target.value; renderRingkasan(); });
-}
-
-function buildChart(computed){
-  const w = 500, h = 170, padL = 34, padR = 8, padT = 10, padB = 22;
-  const cw = w - padL - padR, ch = h - padT - padB;
-  const ihsg0 = computed[0].ihsg || 1;
-  const points = computed.map(r=>({date:r.date, nab:r.nab, ihsgIdx: (r.ihsg/ihsg0)*1000}));
-  const maxY = Math.max(...points.map(p=>Math.max(p.nab,p.ihsgIdx)), 1000);
-  const minY = Math.min(...points.map(p=>Math.min(p.nab,p.ihsgIdx)), 1000);
-  const range = (maxY-minY) || 1;
-
-  const x = i => padL + (points.length===1 ? cw/2 : (i/(points.length-1))*cw);
-  const y = v => padT + ch - ((v-minY)/range)*ch;
-
-  const linePath = key => points.map((p,i)=> (i===0?'M':'L') + x(i).toFixed(1) + ',' + y(p[key]).toFixed(1)).join(' ');
-
-  const gridLines = [0,0.5,1].map(f=>{
-    const val = minY + f*range;
-    const yy = padT + ch - f*ch;
-    return `<line x1="${padL}" y1="${yy}" x2="${w-padR}" y2="${yy}" stroke="#D9DCD1" stroke-width="1"/>
-    <text x="${padL-6}" y="${yy+3}" font-size="9" fill="#5C6B62" text-anchor="end" font-family="Inter">${val.toFixed(0)}</text>`;
-  }).join('');
-
-  const labelStep = points.length > 6 ? Math.ceil(points.length/6) : 1;
-  const labels = points.map((p,i)=> (i%labelStep===0 || i===points.length-1) ?
-    `<text x="${x(i).toFixed(1)}" y="${h-4}" font-size="9" fill="#5C6B62" text-anchor="middle" font-family="Inter">${shortMonth(p.date)}</text>` : '').join('');
-
-  const dotsNab = points.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p.nab).toFixed(1)}" r="3" fill="#1F3D34"/>`).join('');
-  const dotsIhsg = points.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p.ihsgIdx).toFixed(1)}" r="3" fill="#9A8148"/>`).join('');
-
-  return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-    ${gridLines}
-    <path d="${linePath('ihsgIdx')}" fill="none" stroke="#9A8148" stroke-width="2" stroke-dasharray="4,3"/>
-    <path d="${linePath('nab')}" fill="none" stroke="#1F3D34" stroke-width="2.5"/>
-    ${dotsIhsg}
-    ${dotsNab}
-    ${labels}
-  </svg>`;
-}
-function shortMonth(dateStr){
-  const d = new Date(dateStr+'T00:00:00');
-  return d.toLocaleDateString('id-ID',{month:'short',year:'2-digit'});
-}
-
-// ---------- render data/input ----------
-function renderData(){
-  const el = document.getElementById('view-data');
-  const computed = compute();
-  const editing = editingId ? rows.find(r=>r.id===editingId) : null;
-
-  el.innerHTML = `
-    <div class="card">
-      <h2>${editing ? 'Ubah entri' : (rows.length===0 ? 'Setoran awal' : 'Tambah entri bulan ini')}</h2>
-      <p class="desc">${rows.length===0 ? 'Entri pertama menjadi baseline (NAB = 1000).' : 'Isi tanggal, dana masuk/keluar, nilai equity aktual (dari broker), dan level IHSG.'}</p>
-      <form id="form-entry">
-        <div class="field">
-          <label>Tanggal</label>
-          <input type="date" id="f-date" value="${editing?editing.date:''}" required>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Dana masuk/keluar (Rp)</label>
-            <input type="number" id="f-dana" placeholder="0" value="${editing?editing.dana:'0'}" required>
-          </div>
-          <div class="field">
-            <label>Equity aktual (Rp)</label>
-            <input type="number" id="f-equity" placeholder="0" min="0" value="${editing?editing.equity:''}" required>
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>Dividen diterima (Rp)</label>
-            <input type="number" id="f-dividen" placeholder="0" min="0" value="${editing?(editing.dividen||0):'0'}">
-          </div>
-          <div class="field">
-            <label>IHSG</label>
-            <input type="number" id="f-ihsg" placeholder="7000" min="0" step="0.01" value="${editing?editing.ihsg:''}" required>
-          </div>
-        </div>
-        <div class="btn-row">
-          <button type="submit" class="primary">${editing?'Simpan perubahan':'Tambah entri'}</button>
-          ${editing?'<button type="button" class="secondary" id="cancel-edit">Batal</button>':''}
-        </div>
-      </form>
-      <p class="note">Dana negatif berarti penarikan dana. Isi minus di depan angka, misal -50000. Dividen cukup untuk dicatat/dipantau — jika kas dividen masih mengendap di akun, nilainya otomatis sudah ikut terhitung di kolom Equity, jadi tidak perlu dimasukkan lagi ke kolom Dana. Kalau dividen ditarik keluar dari akun, catat penarikannya di kolom Dana (minus). Data tersimpan otomatis di perangkat ini setiap kali ditambah/diubah.</p>
-    </div>
-
-    <div class="card">
-      <h2>Riwayat lengkap</h2>
-      ${computed.length ? `
-      <div class="scroll-x">
-      <table class="data-table">
-        <thead><tr>
-          <th>Tanggal</th><th>Dana</th><th>Dividen</th><th>Unit</th><th>Equity</th><th>NAB</th><th>NAB%</th><th>IHSG</th><th>IHSG%</th><th></th>
-        </tr></thead>
-        <tbody>
-        ${[...computed].reverse().map(r=>`
-          <tr>
-            <td>${fmtDate(r.date)}</td>
-            <td>${fmtRp(r.dana)}</td>
-            <td>${r.dividen ? fmtRp(r.dividen) : '—'}</td>
-            <td>${r.totalUnit.toFixed(2)}</td>
-            <td>${fmtRp(r.equity)}</td>
-            <td>${fmtRp(r.nab)}</td>
-            <td style="color:${r.nabPct===null?'inherit':(r.nabPct>=0?'var(--gain)':'var(--loss)')}">${fmtPct(r.nabPct)}</td>
-            <td>${r.ihsg}</td>
-            <td style="color:${r.ihsgPct===null?'inherit':(r.ihsgPct>=0?'var(--gain)':'var(--loss)')}">${fmtPct(r.ihsgPct)}</td>
-            <td><span class="edit-btn" onclick="startEdit('${r.id}')">Ubah</span><span class="delete-btn" onclick="deleteEntry('${r.id}')">Hapus</span></td>
-          </tr>
-        `).join('')}
-        </tbody>
-      </table>
-      </div>
-      ` : `<div class="empty">Belum ada entri.</div>`}
-    </div>
-  `;
-
-  document.getElementById('form-entry').addEventListener('submit', e=>{
-    e.preventDefault();
-    const date = document.getElementById('f-date').value;
-    const dana = parseFloat(document.getElementById('f-dana').value)||0;
-    const dividen = parseFloat(document.getElementById('f-dividen').value)||0;
-    const equity = parseFloat(document.getElementById('f-equity').value);
-    const ihsg = parseFloat(document.getElementById('f-ihsg').value);
-    if(!date || isNaN(equity) || isNaN(ihsg)) return;
-    if(editingId){
-      const idx = rows.findIndex(r=>r.id===editingId);
-      rows[idx] = {...rows[idx], date, dana, dividen, equity, ihsg};
-      editingId = null;
-    } else {
-      rows.push({id:'e_'+Date.now(), date, dana, dividen, equity, ihsg});
+    function syncWatchForm(){
+      const w = editingWatch.value;
+      wKode.value = w ? w.kode : '';
+      wNama.value = w ? (w.nama||'') : '';
+      wEps.value = w ? String(w.eps) : '';
+      wPe.value = w ? String(w.peMean) : '';
     }
-    saveData();
-    renderAll();
-  });
-  const cancelBtn = document.getElementById('cancel-edit');
-  if(cancelBtn) cancelBtn.addEventListener('click', ()=>{ editingId=null; renderAll(); });
-}
 
-function startEdit(id){ editingId = id; renderAll(); document.getElementById('view-data').scrollIntoView({behavior:'smooth'}); }
-function deleteEntry(id){ rows = rows.filter(r=>r.id!==id); saveData(); renderAll(); }
-
-// ---------- render watchlist ----------
-function renderWatchlist(){
-  const el = document.getElementById('view-watchlist');
-  const editing = editingWatchId ? watchlist.find(w=>w.id===editingWatchId) : null;
-  const totalBeli = watchlist.filter(w=>w.status==='Beli').length;
-
-  el.innerHTML = `
-    <div class="card">
-      <h2>${editing ? 'Ubah saham' : 'Tambah ke watchlist'}</h2>
-      <p class="desc">Kode pakai kode IDX (mis. BBCA, TLKM) — otomatis dicari sebagai {KODE}.JK di Yahoo Finance. EPS &amp; mean PE 5 tahun isi manual, idealnya diperbarui tiap ada laporan keuangan kuartalan baru.</p>
-      <form id="form-watch">
-        <div class="field-row">
-          <div class="field">
-            <label>Kode Saham (IDX)</label>
-            <input type="text" id="w-kode" placeholder="BBCA" value="${editing?editing.kode:''}" required>
-          </div>
-          <div class="field">
-            <label>Nama (opsional)</label>
-            <input type="text" id="w-nama" placeholder="Bank BCA" value="${editing?(editing.nama||''):''}">
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label>EPS (Rp)</label>
-            <input type="number" id="w-eps" placeholder="350" step="0.01" value="${editing?editing.eps:''}" required>
-          </div>
-          <div class="field">
-            <label>Mean PE Band 5 Tahun</label>
-            <input type="number" id="w-pe" placeholder="18.5" step="0.01" value="${editing?editing.peMean:''}" required>
-          </div>
-        </div>
-        <div class="btn-row">
-          <button type="submit" class="primary">${editing?'Simpan perubahan':'Tambah ke watchlist'}</button>
-          ${editing?'<button type="button" class="secondary" id="cancel-edit-watch">Batal</button>':''}
-        </div>
-      </form>
-      <p class="note">Harga Wajar = EPS × Mean PE 5 Tahun. MOS = (Harga Wajar − Price) ÷ Harga Wajar. Status "Beli" kalau MOS ≥ 30%, selain itu "Mahal". Action "Jual" kalau Price ≥ Harga Wajar, selain itu "Hold".</p>
-    </div>
-
-    <div class="card">
-      <h2>Daftar watchlist</h2>
-      <p class="desc">${watchlist.length} saham dipantau &middot; ${totalBeli} sinyal Beli saat ini.</p>
-      <div class="btn-row" style="margin-bottom:12px;">
-        <button class="secondary" id="refresh-prices">Refresh Harga (Yahoo Finance)</button>
-      </div>
-      ${watchlist.length ? `
-      <div class="scroll-x">
-      <table class="data-table">
-        <thead><tr>
-          <th>Kode</th><th>Price</th><th>Harga Wajar</th><th>MOS</th><th>Status</th><th>Action</th><th></th>
-        </tr></thead>
-        <tbody>
-        ${[...watchlist].sort((a,b)=>b.mos-a.mos).map(w=>`
-          <tr>
-            <td style="text-align:left;">
-              <div style="font-weight:600;">${w.kode}</div>
-              ${w.nama?`<div class="meta" style="font-size:10.5px;">${w.nama}</div>`:''}
-            </td>
-            <td>${w.price ? fmtRp(w.price) : '—'}</td>
-            <td>${fmtRp(w.hargaWajar)}</td>
-            <td style="color:${w.mos>=0?'var(--gain)':'var(--loss)'}">${fmtPct(w.mos)}</td>
-            <td><span class="pill ${w.status==='Beli'?'gain':'loss'}">${w.status}</span></td>
-            <td><span class="pill ${w.action==='Jual'?'loss':'gain'}">${w.action}</span></td>
-            <td><span class="edit-btn" onclick="startEditWatch('${w.id}')">Ubah</span><span class="delete-btn" onclick="deleteWatch('${w.id}')">Hapus</span></td>
-          </tr>
-        `).join('')}
-        </tbody>
-      </table>
-      </div>
-      <p class="note">Terakhir update harga: ${watchlist.some(w=>w.updatedAt) ? fmtDate((watchlist.find(w=>w.updatedAt)||{}).updatedAt.slice(0,10)) : 'belum pernah'}. Diperbarui otomatis tiap awal kuartal (Jan/Apr/Jul/Okt) lewat trigger Apps Script, atau kapan saja lewat tombol Refresh di atas.</p>
-      ` : `<div class="empty">Belum ada saham di watchlist.</div>`}
-    </div>
-  `;
-
-  document.getElementById('form-watch').addEventListener('submit', e=>{
-    e.preventDefault();
-    const kode = document.getElementById('w-kode').value.trim().toUpperCase();
-    const nama = document.getElementById('w-nama').value.trim();
-    const eps = parseFloat(document.getElementById('w-eps').value);
-    const peMean = parseFloat(document.getElementById('w-pe').value);
-    if(!kode || isNaN(eps) || isNaN(peMean)) return;
-    if(editingWatchId){
-      const idx = watchlist.findIndex(w=>w.id===editingWatchId);
-      watchlist[idx] = {...watchlist[idx], kode, nama, eps, peMean};
-      editingWatchId = null;
-    } else {
-      watchlist.push({id:'w_'+Date.now(), kode, nama, eps, peMean, price:0, updatedAt:''});
+    // ---------- actions ----------
+    function submitEntry(){
+      const date = fDate.value;
+      const dana = parseFloat(fDana.value)||0;
+      const dividen = parseFloat(fDividen.value)||0;
+      const equity = parseFloat(fEquity.value);
+      const ihsg = parseFloat(fIhsg.value);
+      if(!date || isNaN(equity) || isNaN(ihsg)) return;
+      if(editingId.value){
+        const idx = rows.value.findIndex(r=>r.id===editingId.value);
+        rows.value[idx] = {...rows.value[idx], date, dana, dividen, equity, ihsg};
+        editingId.value = null;
+      } else {
+        rows.value.push({id:'e_'+Date.now(), date, dana, dividen, equity, ihsg});
+      }
+      syncEntryForm();
+      saveData();
     }
-    saveWatchlist().then(renderAll);
-    renderAll();
-  });
-  const cancelBtn = document.getElementById('cancel-edit-watch');
-  if(cancelBtn) cancelBtn.addEventListener('click', ()=>{ editingWatchId=null; renderAll(); });
-  document.getElementById('refresh-prices').addEventListener('click', refreshPrices);
-}
-function startEditWatch(id){ editingWatchId = id; renderAll(); document.getElementById('view-watchlist').scrollIntoView({behavior:'smooth'}); }
-function deleteWatch(id){ watchlist = watchlist.filter(w=>w.id!==id); saveWatchlist().then(renderAll); renderAll(); }
+    function startEdit(id){ editingId.value = id; syncEntryForm(); }
+    function cancelEditEntry(){ editingId.value = null; syncEntryForm(); }
+    function deleteEntry(id){ rows.value = rows.value.filter(r=>r.id!==id); saveData(); }
 
-// ---------- render pengaturan ----------
-function renderPengaturan(){
-  const el = document.getElementById('view-pengaturan');
-  el.innerHTML = `
-    <div class="card">
-      <h2>Database (Google Sheets)</h2>
-      <p class="desc">${syncStatus.connected ? 'Data disinkronkan ke Google Sheets lewat Apps Script — semua perangkat yang membuka aplikasi ini dengan URL yang sama akan melihat data yang sama.' : 'Belum tersambung ke Google Sheets. Tempel URL Web App Apps Script Anda di bawah supaya data (Portofolio &amp; Watchlist) tersimpan terpusat, bukan hanya di perangkat ini.'}</p>
-      <form id="form-script-url">
-        <div class="field">
-          <label>URL Web App Apps Script</label>
-          <input type="url" id="f-script-url" placeholder="https://script.google.com/macros/s/xxx/exec" value="${(localStorage.getItem('apps-script-url')||'')}">
-        </div>
-        <button type="submit" class="primary">Sambungkan</button>
-      </form>
-      <p class="status" id="sync-status" style="margin-top:8px;color:${syncStatus.state==='error'?'var(--loss)':(syncStatus.connected?'var(--gain)':'var(--ink-muted)')}">${syncStatus.message}</p>
-    </div>
-  `;
-  document.getElementById('form-script-url').addEventListener('submit', async e=>{
-    e.preventDefault();
-    const url = document.getElementById('f-script-url').value.trim();
-    setScriptUrl(url);
-    await loadData();
-  });
-}
+    function submitWatch(){
+      const kode = wKode.value.trim().toUpperCase();
+      const nama = wNama.value.trim();
+      const eps = parseFloat(wEps.value);
+      const peMean = parseFloat(wPe.value);
+      if(!kode || isNaN(eps) || isNaN(peMean)) return;
+      if(editingWatchId.value){
+        const idx = watchlist.value.findIndex(w=>w.id===editingWatchId.value);
+        watchlist.value[idx] = {...watchlist.value[idx], kode, nama, eps, peMean};
+        editingWatchId.value = null;
+      } else {
+        watchlist.value.push({id:'w_'+Date.now(), kode, nama, eps, peMean, price:0, updatedAt:''});
+      }
+      syncWatchForm();
+      saveWatchlist();
+    }
+    function startEditWatch(id){ editingWatchId.value = id; syncWatchForm(); }
+    function cancelEditWatch(){ editingWatchId.value = null; syncWatchForm(); }
+    function deleteWatch(id){ watchlist.value = watchlist.value.filter(w=>w.id!==id); saveWatchlist(); }
 
-function renderAll(){
-  if(!loaded) return;
-  renderRingkasan();
-  renderData();
-  renderWatchlist();
-  renderPengaturan();
-}
+    onMounted(()=>{ loadData(); });
 
-document.querySelectorAll('.tab').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
-    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('view-'+btn.dataset.tab).classList.add('active');
-  });
-});
-
-document.getElementById('app-version').textContent = `Tracking Saham ${APP_VERSION} · build ${APP_BUILD}`;
-loadData();
+    return {
+      APP_VERSION, APP_BUILD, tabs, activeTab,
+      rows, watchlist, editingId, editingWatchId, yearFilter,
+      fDate, fDana, fEquity, fDividen, fIhsg, wKode, wNama, wEps, wPe, scriptUrlInput,
+      fmtRp, fmtPct, fmtDate, fmtMonth, pctColor, cagrColor,
+      syncStatus, connectScript, refreshPrices,
+      computedRows, reversedComputedRows, lastRow, totalReturn, cagr, totalDividenAllTime,
+      years, activeComputed, yearStats, prevYearStats, chartSvg, monthlyPerf,
+      editingEntry, editingWatch, sortedWatchlist, totalBeli, lastPriceUpdateLabel,
+      submitEntry, startEdit, cancelEditEntry, deleteEntry,
+      submitWatch, startEditWatch, cancelEditWatch, deleteWatch,
+      parseInt, Math
+    };
+  }
+}).mount('#app');
 </script>
 </body>
 </html>
