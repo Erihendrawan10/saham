@@ -922,10 +922,7 @@ createApp({
     function startEditWatch(id){ editingWatchId.value = id; syncWatchForm(); }
     function cancelEditWatch(){ editingWatchId.value = null; syncWatchForm(); }
     function deleteWatch(id){ watchlist.value = watchlist.value.filter(w=>w.id!==id); saveWatchlist(); }
-SISIPAN 3 — SCRIPT. Di dalam <script>, tempel blok ini tepat SEBELUM baris:
-    onMounted(()=>{ loadData(); });
-================================================================
--->
+    
     // ================= TAB ANALISA (SISIPAN 3) =================
     const gfData = ref([]);
     const gfState = reactive({ loading:false, msg:'', error:false, at:'' });
@@ -1066,10 +1063,11 @@ SISIPAN 3 — SCRIPT. Di dalam <script>, tempel blok ini tepat SEBELUM baris:
       years, activeComputed, yearStats, prevYearStats, chartSvg, monthlyPerf,
       editingEntry, editingWatch, sortedWatchlist, totalBeli, lastPriceUpdateLabel,
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
-      submitWatch, startEditWatch, cancelEditWatch, deleteWatch,
-      "parseInt, Math,")
-    ...analisa
+            submitWatch, startEditWatch, cancelEditWatch, deleteWatch,
+      parseInt, Math,
+      ...analisa
     };
+   
   }
 }).mount('#app');
 </script>
