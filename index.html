@@ -477,6 +477,7 @@ createApp({
 
     const fDate = ref(''); const fDana = ref('0'); const fEquity = ref(''); const fDividen = ref('0'); const fIhsg = ref('');
     const wKode = ref(''); const wNama = ref(''); const wEps = ref(''); const wPe = ref('');
+    const wRoe = ref(''); const wDer = ref(''); const wGrowth = ref(''); const wDy = ref('');
     const scriptUrlInput = ref(localStorage.getItem('apps-script-url') || '');
 
     const fmtRp = n => 'Rp' + Math.round(n).toLocaleString('id-ID');
@@ -501,6 +502,7 @@ createApp({
     function toApiPortfolioRow(r){
       return { id:r.id, tanggal:r.date, dana:r.dana, dividen:r.dividen||0, equity:r.equity, ihsg:r.ihsg };
     }
+    const optNum = v => { if(v===''||v===null||v===undefined) return ''; const n=Number(v); return isNaN(n)?'':n; };
     function fromApiPortfolioRow(r){
       return { id:String(r.id), date:String(r.tanggal), dana:Number(r.dana)||0, dividen:Number(r.dividen)||0, equity:Number(r.equity)||0, ihsg:Number(r.ihsg)||0 };
     }
@@ -509,7 +511,8 @@ createApp({
         id:String(r.id), kode:String(r.kode||'').toUpperCase(), nama:r.nama||'',
         eps:Number(r.eps)||0, peMean:Number(r.peMean)||0, price:Number(r.price)||0,
         hargaWajar:Number(r.hargaWajar)||0, mos:Number(r.mos)||0,
-        status:r.status||'', action:r.action||'', updatedAt:r.updatedAt||''
+        status:r.status||'', action:r.action||'',updatedAt:r.updatedAt||'',
+roe: optNum(r.roe), der: optNum(r.der), growth: optNum(r.growth), dy: optNum(r.dy)
       };
     }
 
@@ -632,7 +635,7 @@ createApp({
         syncStatus.message = 'Ambil harga otomatis butuh koneksi ke Google Sheets (Apps Script) — sambungkan dulu di tab Pengaturan.';
         return;
       }
-      syncStatus.connected = true; syncStatus.state='saving'; syncStatus.message='Mengambil harga terbaru dari Yahoo Finance…';
+      syncStatus.connected = true; syncStatus.state='saving'; syncStatus.message='Mengambil harga terbaru dari Google Finance';
       try{
         const res = await fetch(url, {
           method:'POST',
@@ -786,7 +789,36 @@ createApp({
       const d = new Date(dateStr+'T00:00:00');
       return d.toLocaleDateString('id-ID',{month:'short',year:'2-digit'});
     }
+function scoreStock(w){
+  const clamp = (v,a,b)=> Math.max(a,Math.min(b,v));
+  const has = v => v!=='' && v!==null && v!==undefined && !isNaN(v);
+  const factors = [];
+  // 1. Valuasi: Margin of Safety (Graham/Buffett). 30% -> 0, >=60% -> 100
+  factors.push({name:'MOS', weight:40, score: clamp((w.mos-0.30)/0.30,0,1)*100});
+  // 2. Earnings Yield (Greenblatt). 6% -> 0, >=15% -> 100
+  if(w.price>0 && w.eps>0){
+    const ey = w.eps/w.price;
+    factors.push({name:'EY', weight:10, score: clamp((ey-0.06)/0.09,0,1)*100});
+  }
+  // 3. Kualitas: ROE (Buffett). 10% -> 0, >=25% -> 100
+  if(has(w.roe)) factors.push({name:'ROE', weight:15, score: clamp((w.roe-10)/15,0,1)*100});
+  // 4. Keamanan neraca: DER (Graham). <=0.5 -> 100, >=2 -> 0
+  if(has(w.der)) factors.push({name:'DER', weight:10, score: clamp((2-w.der)/1.5,0,1)*100});
+  // 5. PEG (Peter Lynch). PEG<=1 -> 100, >=2 -> 0, growth<=0 -> 0
+  if(has(w.growth) && w.price>0 && w.eps>0){
+    const pe = w.price/w.eps;
+    const peg = w.growth>0 ? pe/w.growth : Infinity;
+    factors.push({name:'PEG', weight:15, score: isFinite(peg) ? clamp(2-peg,0,1)*100 : 0});
+  }
+  // 6. Dividend Yield. 0% -> 0, >=5% -> 100
+  if(has(w.dy)) factors.push({name:'DY', weight:10, score: clamp(w.dy/5,0,1)*100});
 
+  const totalW = factors.reduce((a,f)=>a+f.weight,0);
+  const skor = factors.reduce((a,f)=>a+f.score*f.weight,0)/totalW;
+  const grade = skor>=75 ? 'A' : (skor>=60 ? 'B' : (skor>=45 ? 'C' : 'D'));
+  const label = {A:'⭐ Prioritas', B:'👍 Layak', C:'🤔 Cukup', D:'⚠️ Lemah'}[grade];
+  return {skor, grade, label, factors, completeness: totalW};
+}
     // ---------- computed (reaktif, dipakai di template) ----------
     const computedRows = computed(()=> compute());
     const reversedComputedRows = computed(()=> [...computedRows.value].reverse());
@@ -805,6 +837,10 @@ createApp({
     const editingWatch = computed(()=> editingWatchId.value ? watchlist.value.find(w=>w.id===editingWatchId.value) : null);
     const sortedWatchlist = computed(()=> [...watchlist.value].sort((a,b)=>b.mos-a.mos));
     const totalBeli = computed(()=> watchlist.value.filter(w=>w.status==='Beli').length);
+    const rankedBeli = computed(()=> watchlist.value
+  .filter(w=>w.status==='Beli')
+  .map(w=>({...w, ...scoreStock(w)}))
+  .sort((a,b)=>b.skor-a.skor));
     const lastPriceUpdateLabel = computed(()=>{
       const withUpdate = watchlist.value.find(w=>w.updatedAt);
       return withUpdate ? fmtDate(withUpdate.updatedAt.slice(0,10)) : 'belum pernah';
@@ -825,6 +861,10 @@ createApp({
       wNama.value = w ? (w.nama||'') : '';
       wEps.value = w ? String(w.eps) : '';
       wPe.value = w ? String(w.peMean) : '';
+      wRoe.value = w && w.roe!=='' ? String(w.roe) : '';
+wDer.value = w && w.der!=='' ? String(w.der) : '';
+wGrowth.value = w && w.growth!=='' ? String(w.growth) : '';
+wDy.value = w && w.dy!=='' ? String(w.dy) : '';
     }
 
     // ---------- actions ----------
@@ -854,14 +894,14 @@ createApp({
       const nama = wNama.value.trim();
       const eps = parseFloat(wEps.value);
       const peMean = parseFloat(wPe.value);
+      const opt = v => { const n=parseFloat(v); return isNaN(n)?'':n; };
+const roe=opt(wRoe.value), der=opt(wDer.value), growth=opt(wGrowth.value), dy=opt(wDy.value);
       if(!kode || isNaN(eps) || isNaN(peMean)) return;
       if(editingWatchId.value){
         const idx = watchlist.value.findIndex(w=>w.id===editingWatchId.value);
-        watchlist.value[idx] = {...watchlist.value[idx], kode, nama, eps, peMean};
-        editingWatchId.value = null;
-      } else {
-        watchlist.value.push({id:'w_'+Date.now(), kode, nama, eps, peMean, price:0, updatedAt:''});
-      }
+        watchlist.value[idx] = {...watchlist.value[idx], kode, nama, eps, peMean, roe, der, growth, dy};
+...
+watchlist.value.push({id:'w_'+Date.now(), kode, nama, eps, peMean, roe, der, growth, dy, price:0, updatedAt:''});
       syncWatchForm();
       saveWatchlist();
     }
@@ -882,7 +922,7 @@ createApp({
       editingEntry, editingWatch, sortedWatchlist, totalBeli, lastPriceUpdateLabel,
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
       submitWatch, startEditWatch, cancelEditWatch, deleteWatch,
-      parseInt, Math
+      parseInt, Math,wRoe, wDer, wGrowth, wDy, rankedBeli
     };
   }
 }).mount('#app');
