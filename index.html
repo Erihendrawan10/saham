@@ -6,151 +6,75 @@
 <title>Tracking Kinerja Saham</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <style>
-  [v-cloak] { display: none !important; }
-  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-
-  *{ box-sizing:border-box; }
-  html,body{ margin:0; }
-  body{
-    color:#1E293B;
-    background:
-      radial-gradient(circle at 15% 0%, rgba(52,211,153,.12), transparent 45%),
-      radial-gradient(circle at 100% 20%, rgba(45,212,191,.08), transparent 40%),
-      linear-gradient(180deg, #F8FAF9 0%, #F1F5F4 45%, #F8FAF9 100%);
-    min-height:100vh;
-    -webkit-font-smoothing:antialiased;
-  }
-  .font-display{ font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-
-  /* ---- komponen kustom (efek "2026": glass + gradient + glow) ---- */
-  .glass-card{
-    background: rgba(255,255,255,.85);
-    -webkit-backdrop-filter: blur(18px);
-    backdrop-filter: blur(18px);
-    border: 1px solid rgba(15,23,42,.07);
-    border-radius: 1.5rem;
-    box-shadow: 0 20px 45px -25px rgba(15,23,42,.18);
-  }
-  .hero-card{
-    position:relative; overflow:hidden; border-radius:1.75rem; padding:22px 20px;
-    background: linear-gradient(135deg, #10B981 0%, #0D9488 55%, #065F5B 100%);
-    box-shadow: 0 25px 60px -18px rgba(16,185,129,.35);
-  }
-  .hero-glow{
-    position:absolute; width:220px; height:220px; border-radius:9999px;
-    background: radial-gradient(circle, rgba(255,255,255,.35), transparent 70%);
-    top:-90px; right:-70px; filter: blur(4px); opacity:.6; pointer-events:none;
-  }
-  .input-field{
-    width:100%; padding:.62rem .8rem; font-size:14px; color:#1E293B;
-    background: rgba(255,255,255,.9); border:1px solid rgba(15,23,42,.14);
-    border-radius:.9rem; transition: border-color .15s, background .15s;
-  }
-  .input-field::placeholder{ color: rgba(30,41,59,.4); }
-  .input-field:focus{ outline:none; border-color:#10B981; background:#FFFFFF; }
-  .btn-primary{
-    background: linear-gradient(135deg,#34D399,#0D9488);
-    color:#052E27; font-weight:700; font-size:14px; padding:.68rem; border:none; border-radius:.9rem;
-    cursor:pointer; box-shadow: 0 10px 24px -8px rgba(16,185,129,.4);
-    transition: transform .12s ease;
-  }
-  .btn-primary:active{ transform: scale(.97); }
-  .btn-secondary{
-    background: rgba(15,23,42,.04); color:#334155; border:1px solid rgba(15,23,42,.12);
-    font-weight:600; font-size:13px; padding:.62rem; border-radius:.9rem; cursor:pointer;
-    transition: background .15s;
-  }
-  .btn-secondary:hover{ background: rgba(15,23,42,.08); }
-  .pill{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:9999px; display:inline-flex; align-items:center; gap:4px; }
-  .pill-gain{ background: rgba(16,185,129,.12); color:#0D9488; }
-  .pill-loss{ background: rgba(244,63,94,.12); color:#E11D48; }
-  .pill-amber{ background: rgba(245,158,11,.14); color:#B45309; }
-  .pill-slate{ background: rgba(100,116,139,.12); color:#475569; }
-  .dot{ width:8px; height:8px; border-radius:9999px; display:inline-block; }
-  .tab-btn{ transition: all .18s ease; }
-  .scrollbar-thin::-webkit-scrollbar{ height:6px; }
-  .scrollbar-thin::-webkit-scrollbar-thumb{ background: rgba(15,23,42,.15); border-radius:9999px; }
+  [v-cloak]{display:none!important}
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;color:#1E293B;min-height:100vh;-webkit-font-smoothing:antialiased;
+    background:radial-gradient(circle at 15% 0%,rgba(52,211,153,.12),transparent 45%),radial-gradient(circle at 100% 20%,rgba(45,212,191,.08),transparent 40%),linear-gradient(180deg,#F8FAF9,#F1F5F4 45%,#F8FAF9)}
+  .glass-card{background:rgba(255,255,255,.85);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border:1px solid rgba(15,23,42,.07);border-radius:1.5rem;box-shadow:0 20px 45px -25px rgba(15,23,42,.18)}
+  .hero-card{position:relative;overflow:hidden;border-radius:1.75rem;padding:22px 20px;background:linear-gradient(135deg,#10B981,#0D9488 55%,#065F5B);box-shadow:0 25px 60px -18px rgba(16,185,129,.35)}
+  .hero-glow{position:absolute;width:220px;height:220px;border-radius:9999px;background:radial-gradient(circle,rgba(255,255,255,.35),transparent 70%);top:-90px;right:-70px;opacity:.6;pointer-events:none}
+  .input-field{width:100%;padding:.62rem .8rem;font-size:14px;color:#1E293B;background:rgba(255,255,255,.9);border:1px solid rgba(15,23,42,.14);border-radius:.9rem}
+  .input-field:focus{outline:none;border-color:#10B981;background:#fff}
+  .input-field:disabled{opacity:.5}
+  .btn-primary{background:linear-gradient(135deg,#34D399,#0D9488);color:#052E27;font-weight:700;font-size:14px;padding:.68rem;border:none;border-radius:.9rem;cursor:pointer;box-shadow:0 10px 24px -8px rgba(16,185,129,.4)}
+  .btn-primary:active{transform:scale(.97)}
+  .btn-secondary{background:rgba(15,23,42,.04);color:#334155;border:1px solid rgba(15,23,42,.12);font-weight:600;font-size:13px;padding:.62rem;border-radius:.9rem;cursor:pointer}
+  .btn-secondary:hover{background:rgba(15,23,42,.08)}
+  .pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+  .pill-gain{background:rgba(16,185,129,.12);color:#0D9488}
+  .pill-loss{background:rgba(244,63,94,.12);color:#E11D48}
+  .pill-amber{background:rgba(245,158,11,.14);color:#B45309}
+  .pill-slate{background:rgba(100,116,139,.12);color:#475569}
+  .dot{width:8px;height:8px;border-radius:9999px;display:inline-block}
+  .tab-btn{transition:all .18s ease}
+  .scrollbar-thin::-webkit-scrollbar{height:6px}
+  .scrollbar-thin::-webkit-scrollbar-thumb{background:rgba(15,23,42,.15);border-radius:9999px}
 </style>
 </head>
 <body>
 <div id="app" v-cloak class="max-w-lg lg:max-w-5xl mx-auto px-4 md:px-8 pt-7 pb-28 lg:pb-12">
 
-  <!-- ================= HEADER ================= -->
+  <!-- HEADER -->
   <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between text-center lg:text-left mb-6 gap-4">
-    <h1 class="font-display font-extrabold text-2xl tracking-tight bg-clip-text text-transparent" style="background-image:linear-gradient(135deg,#059669,#0D9488,#10B981); -webkit-background-clip:text;">
-      📈 Tracking Kinerja Saham
-    </h1>
-    <!-- Desktop nav -->
+    <h1 class="font-extrabold text-2xl tracking-tight bg-clip-text text-transparent" style="background-image:linear-gradient(135deg,#059669,#0D9488,#10B981);-webkit-background-clip:text;">📈 Tracking Kinerja Saham</h1>
     <div class="hidden lg:flex gap-1 p-1.5 rounded-2xl glass-card">
-      <button v-for="t in tabs" :key="t.id" @click="activeTab=t.id"
-        class="tab-btn flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold"
-        :style="activeTab===t.id
-          ? 'background:linear-gradient(135deg,#34D399,#0D9488); color:#052E27; box-shadow:0 8px 18px -6px rgba(16,185,129,.35);'
-          : 'color:#64748B;'">
-        <span class="text-base leading-none">{{ t.emoji }}</span>
-        <span>{{ t.label }}</span>
+      <button v-for="t in tabs" :key="t.id" @click="activeTab=t.id" class="tab-btn flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold"
+        :style="activeTab===t.id ? 'background:linear-gradient(135deg,#34D399,#0D9488);color:#052E27;box-shadow:0 8px 18px -6px rgba(16,185,129,.35);' : 'color:#64748B;'">
+        <span class="text-base leading-none">{{ t.emoji }}</span><span>{{ t.label }}</span>
       </button>
     </div>
   </div>
 
-  <!-- ================= TAB: RINGKASAN ================= -->
+  <!-- TAB: RINGKASAN -->
   <div v-if="activeTab==='ringkasan'" class="space-y-4">
     <div v-if="computedRows.length===0" class="glass-card p-10 text-center text-slate-400">
-      <div class="text-5xl mb-3">🌱</div>
-      Belum ada data.<br>Tambahkan setoran awal di tab Portofolio.
+      <div class="text-5xl mb-3">🌱</div>Belum ada data.<br>Tambahkan setoran awal di tab Portofolio.
     </div>
-
     <template v-else>
-      <!-- Hero -->
       <div class="hero-card">
         <div class="hero-glow"></div>
         <p class="text-emerald-50/80 text-xs font-semibold mb-1 relative">💰 Nilai portofolio saat ini</p>
-        <p class="font-display text-4xl font-extrabold text-white relative">{{ fmtRp(lastRow.equity) }}</p>
+        <p class="text-4xl font-extrabold text-white relative">{{ fmtRp(lastRow.equity) }}</p>
         <div class="flex gap-4 mt-4 pt-4 border-t border-white/20 flex-wrap relative">
-          <div class="flex-1 min-w-[92px]">
-            <p class="text-[11px] text-emerald-50/70">🧮 NAB saat ini</p>
-            <p class="text-[15px] font-bold text-white font-display">{{ fmtRp(lastRow.nab) }}</p>
-          </div>
-          <div class="flex-1 min-w-[92px]">
-            <p class="text-[11px] text-emerald-50/70">{{ totalReturn>=0 ? '🚀' : '📉' }} Return kumulatif</p>
-            <p class="text-[15px] font-bold font-display" :class="totalReturn>=0 ? 'text-emerald-100' : 'text-rose-100'">{{ fmtPct(totalReturn) }}</p>
-          </div>
-          <div class="flex-1 min-w-[92px]">
-            <p class="text-[11px] text-emerald-50/70">📅 Per {{ fmtDate(lastRow.date) }}</p>
-            <p class="text-[15px] font-bold text-white font-display">{{ computedRows.length }} entri</p>
-          </div>
+          <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">🧮 NAB saat ini</p><p class="text-[15px] font-bold text-white">{{ fmtRp(lastRow.nab) }}</p></div>
+          <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">{{ totalReturn>=0 ? '🚀' : '📉' }} Return kumulatif</p><p class="text-[15px] font-bold" :class="totalReturn>=0 ? 'text-emerald-100' : 'text-rose-100'">{{ fmtPct(totalReturn) }}</p></div>
+          <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">📅 Per {{ fmtDate(lastRow.date) }}</p><p class="text-[15px] font-bold text-white">{{ computedRows.length }} entri</p></div>
         </div>
       </div>
 
-      <!-- CAGR grid -->
       <div class="grid grid-cols-3 gap-2.5">
-        <div class="glass-card p-3 text-center">
-          <p class="text-[10px] text-slate-400 mb-1.5 leading-tight">💵 CAGR Equity<br>(money-weighted)</p>
-          <p class="font-display text-[17px] font-bold" :class="cagrColor(cagr.equity)">{{ cagr.equity===null ? '—' : fmtPct(cagr.equity) }}</p>
-        </div>
-        <div class="glass-card p-3 text-center">
-          <p class="text-[10px] text-slate-400 mb-1.5 leading-tight">📐 CAGR NAB<br>(time-weighted)</p>
-          <p class="font-display text-[17px] font-bold" :class="cagrColor(cagr.nab)">{{ cagr.nab===null ? '—' : fmtPct(cagr.nab) }}</p>
-        </div>
-        <div class="glass-card p-3 text-center">
-          <p class="text-[10px] text-slate-400 mb-1.5 leading-tight">🏛️ CAGR IHSG<br>(benchmark)</p>
-          <p class="font-display text-[17px] font-bold" :class="cagrColor(cagr.ihsg)">{{ cagr.ihsg===null ? '—' : fmtPct(cagr.ihsg) }}</p>
-        </div>
+        <div class="glass-card p-3 text-center"><p class="text-[10px] text-slate-400 mb-1.5 leading-tight">💵 CAGR Equity<br>(money-weighted)</p><p class="text-[17px] font-bold" :class="cagrColor(cagr.equity)">{{ cagr.equity===null ? '—' : fmtPct(cagr.equity) }}</p></div>
+        <div class="glass-card p-3 text-center"><p class="text-[10px] text-slate-400 mb-1.5 leading-tight">📐 CAGR NAB<br>(time-weighted)</p><p class="text-[17px] font-bold" :class="cagrColor(cagr.nab)">{{ cagr.nab===null ? '—' : fmtPct(cagr.nab) }}</p></div>
+        <div class="glass-card p-3 text-center"><p class="text-[10px] text-slate-400 mb-1.5 leading-tight">🏛️ CAGR IHSG<br>(benchmark)</p><p class="text-[17px] font-bold" :class="cagrColor(cagr.ihsg)">{{ cagr.ihsg===null ? '—' : fmtPct(cagr.ihsg) }}</p></div>
       </div>
 
-      <!-- Total dividen -->
       <div class="glass-card p-4 flex items-center justify-between">
-        <div>
-          <p class="text-[11px] text-slate-400">💎 Total Dividen Diterima</p>
-          <p class="text-[11px] text-slate-500 -mt-0.5">sepanjang waktu</p>
-          <p class="font-display text-xl font-bold text-amber-600 mt-1.5">{{ fmtRp(totalDividenAllTime) }}</p>
-        </div>
+        <div><p class="text-[11px] text-slate-400">💎 Total Dividen Diterima</p><p class="text-[11px] text-slate-500 -mt-0.5">sepanjang waktu</p><p class="text-xl font-bold text-amber-600 mt-1.5">{{ fmtRp(totalDividenAllTime) }}</p></div>
         <div class="text-4xl opacity-80">🪙</div>
       </div>
 
-      <!-- Filter tahun -->
       <div v-if="years.length>1" class="flex items-center gap-2">
         <label class="text-xs font-semibold text-slate-400 whitespace-nowrap">🗓️ Lihat tahun</label>
         <select v-model="yearFilter" class="input-field">
@@ -159,9 +83,8 @@
         </select>
       </div>
 
-      <!-- Perbandingan tahun -->
       <div v-if="yearStats" class="glass-card p-4">
-        <h2 class="font-display font-bold text-slate-800 mb-1">⚔️ Performa {{ yearFilter }}</h2>
+        <h2 class="font-bold text-slate-800 mb-1">⚔️ Performa {{ yearFilter }}</h2>
         <p class="text-xs text-slate-400 mb-3">Dibandingkan dengan tahun {{ parseInt(yearFilter)-1 }}{{ prevYearStats ? '' : ' (tidak ada data)' }}.</p>
         <div class="grid grid-cols-2 rounded-2xl overflow-hidden border border-slate-200">
           <div class="p-3" style="background:rgba(52,211,153,.08);">
@@ -184,9 +107,8 @@
         </div>
       </div>
 
-      <!-- Chart -->
       <div class="glass-card p-4">
-        <h2 class="font-display font-bold text-slate-800 mb-1">📈 NAB vs IHSG (rebased ke 1000)</h2>
+        <h2 class="font-bold text-slate-800 mb-1">📈 NAB vs IHSG (rebased ke 1000)</h2>
         <p class="text-xs text-slate-400 mb-3">Membandingkan kinerja murni investasi Anda terhadap IHSG, tidak terpengaruh besar/kecilnya setoran.</p>
         <div v-if="activeComputed.length>=2">
           <div v-html="chartSvg"></div>
@@ -198,52 +120,31 @@
         <div v-else class="text-center text-slate-500 text-sm py-6">Tambahkan minimal 2 entri untuk melihat grafik.</div>
       </div>
 
-      <!-- Kinerja bulanan -->
       <div class="glass-card p-4">
-        <h2 class="font-display font-bold text-slate-800 mb-3">🏆 Kinerja bulanan vs IHSG</h2>
+        <h2 class="font-bold text-slate-800 mb-3">🏆 Kinerja bulanan vs IHSG</h2>
         <div v-if="monthlyPerf.length===0" class="text-center text-slate-500 text-sm py-4">Belum ada data bulanan.</div>
         <div v-for="r in monthlyPerf" :key="r.id" class="flex justify-between items-center py-2.5 border-b border-slate-100 last:border-0">
-          <div>
-            <div class="font-semibold text-sm text-slate-800">{{ fmtMonth(r.date) }}</div>
-            <div class="text-[11px] text-slate-400">NAB {{ fmtPct(r.nabPct) }} &middot; IHSG {{ fmtPct(r.ihsgPct) }}</div>
-          </div>
-          <span class="pill" :class="(r.nabPct-r.ihsgPct)>=0 ? 'pill-gain' : 'pill-loss'">
-            {{ (r.nabPct-r.ihsgPct)>=0 ? '🏆 Unggul' : '🔻 Kalah' }} {{ fmtPct(Math.abs(r.nabPct-r.ihsgPct)).replace('+','') }}
-          </span>
+          <div><div class="font-semibold text-sm text-slate-800">{{ fmtMonth(r.date) }}</div><div class="text-[11px] text-slate-400">NAB {{ fmtPct(r.nabPct) }} &middot; IHSG {{ fmtPct(r.ihsgPct) }}</div></div>
+          <span class="pill" :class="(r.nabPct-r.ihsgPct)>=0 ? 'pill-gain' : 'pill-loss'">{{ (r.nabPct-r.ihsgPct)>=0 ? '🏆 Unggul' : '🔻 Kalah' }} {{ fmtPct(Math.abs(r.nabPct-r.ihsgPct)).replace('+','') }}</span>
         </div>
       </div>
     </template>
   </div>
 
-  <!-- ================= TAB: PORTOFOLIO ================= -->
+  <!-- TAB: PORTOFOLIO -->
   <div v-else-if="activeTab==='data'" class="space-y-4">
     <div class="glass-card p-4">
-      <h2 class="font-display font-bold text-slate-800 mb-1">{{ editingEntry ? '✏️ Ubah entri' : (rows.length===0 ? '🌱 Setoran awal' : '➕ Tambah entri bulan ini') }}</h2>
+      <h2 class="font-bold text-slate-800 mb-1">{{ editingEntry ? '✏️ Ubah entri' : (rows.length===0 ? '🌱 Setoran awal' : '➕ Tambah entri bulan ini') }}</h2>
       <p class="text-xs text-slate-400 mb-3">{{ rows.length===0 ? 'Entri pertama menjadi baseline (NAB = 1000).' : 'Isi tanggal, dana masuk/keluar, nilai equity aktual (dari broker), dan level IHSG.' }}</p>
       <form @submit.prevent="submitEntry" class="space-y-3">
-        <div>
-          <label class="text-xs text-slate-400 block mb-1">📅 Tanggal</label>
-          <input type="date" v-model="fDate" required class="input-field">
+        <div><label class="text-xs text-slate-400 block mb-1">📅 Tanggal</label><input type="date" v-model="fDate" required class="input-field"></div>
+        <div class="flex gap-3">
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">💵 Dana masuk/keluar (Rp)</label><input type="number" v-model="fDana" placeholder="0" required class="input-field"></div>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">💼 Equity aktual (Rp)</label><input type="number" v-model="fEquity" placeholder="0" min="0" required class="input-field"></div>
         </div>
         <div class="flex gap-3">
-          <div class="flex-1">
-            <label class="text-xs text-slate-400 block mb-1">💵 Dana masuk/keluar (Rp)</label>
-            <input type="number" v-model="fDana" placeholder="0" required class="input-field">
-          </div>
-          <div class="flex-1">
-            <label class="text-xs text-slate-400 block mb-1">💼 Equity aktual (Rp)</label>
-            <input type="number" v-model="fEquity" placeholder="0" min="0" required class="input-field">
-          </div>
-        </div>
-        <div class="flex gap-3">
-          <div class="flex-1">
-            <label class="text-xs text-slate-400 block mb-1">💎 Dividen diterima (Rp)</label>
-            <input type="number" v-model="fDividen" placeholder="0" min="0" class="input-field">
-          </div>
-          <div class="flex-1">
-            <label class="text-xs text-slate-400 block mb-1">🏛️ IHSG</label>
-            <input type="number" v-model="fIhsg" placeholder="7000" min="0" step="0.01" required class="input-field">
-          </div>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">💎 Dividen diterima (Rp)</label><input type="number" v-model="fDividen" placeholder="0" min="0" class="input-field"></div>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">🏛️ IHSG</label><input type="number" v-model="fIhsg" placeholder="7000" min="0" step="0.01" required class="input-field"></div>
         </div>
         <div class="flex gap-2">
           <button type="submit" class="btn-primary flex-1">{{ editingId ? '💾 Simpan perubahan' : '➕ Tambah entri' }}</button>
@@ -254,23 +155,14 @@
     </div>
 
     <div class="glass-card p-4">
-      <h2 class="font-display font-bold text-slate-800 mb-3">📜 Riwayat lengkap</h2>
+      <h2 class="font-bold text-slate-800 mb-3">📜 Riwayat lengkap</h2>
       <div v-if="computedRows.length" class="overflow-x-auto scrollbar-thin">
         <table class="w-full text-xs" style="min-width:640px;">
-          <thead>
-            <tr class="text-slate-400">
-              <th class="text-left font-semibold pb-2">Tanggal</th>
-              <th class="text-right font-semibold pb-2">Dana</th>
-              <th class="text-right font-semibold pb-2">Dividen</th>
-              <th class="text-right font-semibold pb-2">Unit</th>
-              <th class="text-right font-semibold pb-2">Equity</th>
-              <th class="text-right font-semibold pb-2">NAB</th>
-              <th class="text-right font-semibold pb-2">NAB%</th>
-              <th class="text-right font-semibold pb-2">IHSG</th>
-              <th class="text-right font-semibold pb-2">IHSG%</th>
-              <th></th>
-            </tr>
-          </thead>
+          <thead><tr class="text-slate-400">
+            <th class="text-left font-semibold pb-2">Tanggal</th><th class="text-right font-semibold pb-2">Dana</th><th class="text-right font-semibold pb-2">Dividen</th>
+            <th class="text-right font-semibold pb-2">Unit</th><th class="text-right font-semibold pb-2">Equity</th><th class="text-right font-semibold pb-2">NAB</th>
+            <th class="text-right font-semibold pb-2">NAB%</th><th class="text-right font-semibold pb-2">IHSG</th><th class="text-right font-semibold pb-2">IHSG%</th><th></th>
+          </tr></thead>
           <tbody>
             <tr v-for="r in reversedComputedRows" :key="r.id" class="border-t border-slate-100">
               <td class="py-2 text-slate-600">{{ fmtDate(r.date) }}</td>
@@ -294,73 +186,69 @@
     </div>
   </div>
 
-  <!-- ================= TAB: WATCHLIST ================= -->
+  <!-- TAB: WATCHLIST -->
   <div v-else-if="activeTab==='watchlist'" class="space-y-4">
     <div class="glass-card p-4">
-      <h2 class="font-display font-bold text-slate-800 mb-1">{{ editingWatch ? '✏️ Ubah saham' : '🎯 Tambah ke watchlist' }}</h2>
-      <p class="text-xs text-slate-400 mb-3">Kode pakai kode IDX (mis. BBCA, TLKM) — otomatis dicari sebagai IDX:{KODE} di Google Finance. EPS &amp; mean PE 5 tahun isi manual, idealnya diperbarui tiap ada laporan keuangan kuartalan baru.</p>
+      <h2 class="font-bold text-slate-800 mb-1">{{ editingWatch ? '✏️ Ubah saham' : '🎯 Tambah ke watchlist' }}</h2>
+      <p class="text-xs text-slate-400 mb-3">Harga, PE, EPS, High/Low 52w &amp; Market Cap diambil otomatis dari Google Finance (IDX:KODE). Isi manual data fundamental di bawah (dari laporan keuangan).</p>
       <form @submit.prevent="submitWatch" class="space-y-3">
         <div class="flex gap-3">
-          <div class="flex-1">
-            <label class="text-xs text-slate-400 block mb-1">🏷️ Kode Saham (IDX)</label>
-            <input type="text" v-model="wKode" placeholder="BBCA" required class="input-field">
-          </div>
-          <div class="flex-1">
-            <label class="text-xs text-slate-400 block mb-1">🏢 Nama (opsional)</label>
-            <input type="text" v-model="wNama" placeholder="Bank BCA" class="input-field">
-          </div>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">🏷️ Kode (IDX)</label><input type="text" v-model="wKode" placeholder="BBCA" required class="input-field"></div>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">🏢 Nama</label><input type="text" v-model="wNama" placeholder="Bank BCA" class="input-field"></div>
         </div>
         <div class="flex gap-3">
-          <div class="flex-1">
-            <label class="text-xs text-slate-400 block mb-1">📐 EPS (Rp)</label>
-            <input type="number" v-model="wEps" placeholder="350" step="0.01" required class="input-field">
-          </div>
-          <div class="flex-1">
-            <label class="text-xs text-slate-400 block mb-1">📊 Mean PE Band 5 Tahun</label>
-            <input type="number" v-model="wPe" placeholder="18.5" step="0.01" required class="input-field">
-          </div>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">📐 EPS (kosong = pakai Google Finance)</label><input type="number" v-model="wEps" step="0.01" class="input-field"></div>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">📊 Mean PE 5 Tahun</label><input type="number" v-model="wPe" step="0.01" required class="input-field"></div>
+        </div>
+        <div class="flex gap-3">
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">📚 BVPS (Rp)</label><input type="number" v-model="wBv" step="0.01" class="input-field"></div>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">💎 DPS 12 bln (Rp)</label><input type="number" v-model="wDps" step="0.01" class="input-field"></div>
+        </div>
+        <div class="flex gap-3">
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">🏆 ROE (%)</label><input type="number" v-model="wRoe" step="0.01" class="input-field"></div>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">🌱 Growth EPS (%/thn)</label><input type="number" v-model="wGr" step="0.01" class="input-field"></div>
+        </div>
+        <div class="flex gap-3 items-end">
+          <label class="flex-1 flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" v-model="wOwned"> 📦 Saya sudah punya</label>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">💰 Harga beli rata-rata</label><input type="number" v-model="wAvg" step="0.01" :disabled="!wOwned" class="input-field"></div>
         </div>
         <div class="flex gap-2">
-          <button type="submit" class="btn-primary flex-1">{{ editingWatchId ? '💾 Simpan perubahan' : '🎯 Tambah ke watchlist' }}</button>
+          <button type="submit" class="btn-primary flex-1">{{ editingWatchId ? '💾 Simpan perubahan' : '🎯 Tambah' }}</button>
           <button v-if="editingWatchId" type="button" @click="cancelEditWatch" class="btn-secondary flex-1">Batal</button>
         </div>
       </form>
-      <p class="text-[11px] text-slate-500 mt-3 leading-relaxed">Harga Wajar = EPS × Mean PE 5 Tahun. MOS = (Harga Wajar − Price) ÷ Harga Wajar. Status "Beli" kalau MOS ≥ 30%, selain itu "Mahal". Action "Jual" kalau Price ≥ Harga Wajar, selain itu "Hold".</p>
     </div>
 
     <div class="glass-card p-4">
-      <h2 class="font-display font-bold text-slate-800 mb-1">👁️ Daftar watchlist</h2>
-      <p class="text-xs text-slate-400 mb-3">{{ watchlist.length }} saham dipantau &middot; {{ totalBeli }} sinyal 🟢 Beli saat ini.</p>
-      <button @click="refreshPrices" class="btn-secondary w-full mb-3">🔄 Refresh Harga (Google Finance)</button>
-
+      <h2 class="font-bold text-slate-800 mb-1">👁️ Prioritas beli &amp; jual</h2>
+      <p class="text-xs text-slate-400 mb-3">{{ watchlist.length }} saham · 🟢 {{ totalBeli }} sinyal beli · 🔔 {{ totalJual }} sinyal jual (yang sudah dimiliki). Urut dari prioritas tertinggi.</p>
+      <button @click="refreshPrices" class="btn-secondary w-full mb-3">🔄 Refresh Data (Google Finance)</button>
       <div v-if="watchlist.length" class="overflow-x-auto scrollbar-thin">
-        <table class="w-full text-xs" style="min-width:560px;">
-          <thead>
-            <tr class="text-slate-400">
-              <th class="text-left font-semibold pb-2">Kode</th>
-              <th class="text-right font-semibold pb-2">Price</th>
-              <th class="text-right font-semibold pb-2">Harga Wajar</th>
-              <th class="text-right font-semibold pb-2">MOS</th>
-              <th class="text-center font-semibold pb-2">Status</th>
-              <th class="text-center font-semibold pb-2">Action</th>
-              <th></th>
-            </tr>
-          </thead>
+        <table class="w-full text-xs" style="min-width:860px;">
+          <thead><tr class="text-slate-400">
+            <th class="text-left pb-2">#</th><th class="text-left pb-2">Kode</th><th class="text-right pb-2">Price</th>
+            <th class="text-right pb-2">Wajar PE</th><th class="text-right pb-2">Wajar Graham</th><th class="text-right pb-2">Wajar Div</th>
+            <th class="text-right pb-2">Harga Wajar</th><th class="text-right pb-2">Beli ≤</th><th class="text-right pb-2">Jual ≥</th>
+            <th class="text-right pb-2">MOS</th><th class="text-right pb-2">Skor</th><th class="text-center pb-2">Sinyal</th><th></th>
+          </tr></thead>
           <tbody>
-            <tr v-for="w in sortedWatchlist" :key="w.id" class="border-t border-slate-100">
+            <tr v-for="(w,i) in sortedWatchlist" :key="w.id" class="border-t border-slate-100" :style="w.owned ? 'background:rgba(245,158,11,.05)' : ''">
+              <td class="py-2 text-slate-400">{{ i+1 }}</td>
               <td class="py-2">
-                <div class="font-semibold text-slate-800">{{ w.kode }}</div>
+                <div class="font-semibold text-slate-800">{{ w.kode }} <span v-if="w.owned" title="Sudah dimiliki">📦</span></div>
                 <div v-if="w.nama" class="text-[10px] text-slate-500">{{ w.nama }}</div>
+                <div v-if="w.owned && w.avgBuy>0 && w.price>0" class="text-[10px]" :class="pctColor(w.price/w.avgBuy-1)">P/L {{ fmtPct(w.price/w.avgBuy-1) }}</div>
               </td>
               <td class="py-2 text-right text-slate-600">{{ w.price ? fmtRp(w.price) : '—' }}</td>
-              <td class="py-2 text-right text-slate-600">{{ fmtRp(w.hargaWajar) }}</td>
+              <td class="py-2 text-right text-slate-600">{{ w.fvPE ? fmtRp(w.fvPE) : '—' }}</td>
+              <td class="py-2 text-right text-slate-600">{{ w.fvGraham ? fmtRp(w.fvGraham) : '—' }}</td>
+              <td class="py-2 text-right text-slate-600">{{ w.fvDiv ? fmtRp(w.fvDiv) : '—' }}</td>
+              <td class="py-2 text-right font-semibold text-slate-800">{{ w.hargaWajar ? fmtRp(w.hargaWajar) : '—' }}</td>
+              <td class="py-2 text-right text-emerald-700">{{ w.hargaWajar ? fmtRp(w.buyBelow) : '—' }}</td>
+              <td class="py-2 text-right text-rose-600">{{ w.hargaWajar ? fmtRp(w.sellAbove) : '—' }}</td>
               <td class="py-2 text-right font-medium" :class="pctColor(w.mos)">{{ fmtPct(w.mos) }}</td>
-              <td class="py-2 text-center">
-                <span class="pill" :class="w.status==='Beli' ? 'pill-gain' : 'pill-loss'">{{ w.status==='Beli' ? '🟢' : '🔴' }} {{ w.status }}</span>
-              </td>
-              <td class="py-2 text-center">
-                <span class="pill" :class="w.action==='Jual' ? 'pill-amber' : 'pill-slate'">{{ w.action==='Jual' ? '🔔' : '✋' }} {{ w.action }}</span>
-              </td>
+              <td class="py-2 text-right font-semibold text-slate-700">{{ w.score }}</td>
+              <td class="py-2 text-center"><span class="pill" :class="sig(w).cls">{{ sig(w).label }}</span></td>
               <td class="py-2 text-right whitespace-nowrap">
                 <button @click="startEditWatch(w.id)" class="text-emerald-600 text-[11px] underline mr-2">Ubah</button>
                 <button @click="deleteWatch(w.id)" class="text-rose-600 text-[11px] underline">Hapus</button>
@@ -368,41 +256,49 @@
             </tr>
           </tbody>
         </table>
-        <p class="text-[11px] text-slate-500 mt-3 leading-relaxed">🕒 Terakhir update harga: {{ lastPriceUpdateLabel }}. Sumber harga: Google Finance (IDX bisa tertunda ±20 menit). Diperbarui otomatis tiap awal kuartal (Jan/Apr/Jul/Okt) lewat trigger Apps Script, atau kapan saja lewat tombol Refresh di atas.</p>
+        <p class="text-[11px] text-slate-500 mt-3">🕒 Update terakhir: {{ lastPriceUpdateLabel }}. Google Finance IDX bisa tertunda ±20 menit; otomatis tiap awal kuartal atau lewat tombol Refresh.</p>
       </div>
       <div v-else class="text-center text-slate-500 text-sm py-6">Belum ada saham di watchlist.</div>
     </div>
+
+    <div class="glass-card p-4">
+      <h2 class="font-bold text-slate-800 mb-2">📋 Kriteria per kolom</h2>
+      <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed">
+        <li><b>Price</b> (GF): harga terakhir. <b>PE/EPS/High52/Low52/Market Cap</b> (GF) disimpan di Sheet; EPS GF dipakai jika EPS manual kosong.</li>
+        <li><b>Wajar PE</b> = EPS × Mean PE 5 tahun.</li>
+        <li><b>Wajar Graham</b> = √(22,5 × EPS × BVPS).</li>
+        <li><b>Wajar Div</b> = DPS ÷ 5% (harga saat yield dividen 5%).</li>
+        <li><b>Harga Wajar</b> = rata-rata metode yang datanya terisi. <b>Beli ≤</b> = 70% Harga Wajar (MOS 30%). <b>Jual ≥</b> = Harga Wajar.</li>
+        <li><b>MOS</b> = (Harga Wajar − Price) ÷ Harga Wajar.</li>
+        <li><b>Skor (0–100)</b>: MOS 40 (maks di 50%) + ROE 20 (maks di 20%) + Growth EPS 20 (maks di 15%) + Yield dividen 10 (maks di 5%) + posisi 52 minggu 10 (dekat low = tinggi).</li>
+        <li><b>Sinyal belum punya</b>: 🟢🟢 Beli Kuat (MOS ≥40% &amp; skor ≥65) · 🟢 Beli (MOS ≥30% &amp; skor ≥50) · ⏳ Tunggu (MOS ≥10%) · 🔴 Mahal.</li>
+        <li><b>Sinyal sudah punya</b>: 🚨 Jual Semua (≥120% wajar) · 🔔 Jual Sebagian (≥100%) · ⚠️ Waspada (≥90%) · ➕ Tambah (MOS ≥30%) · ✋ Hold.</li>
+        <li><b>Urutan</b>: Jual Semua → Jual Sebagian → Beli Kuat → Beli → Waspada → lainnya (berdasar skor).</li>
+      </ul>
+    </div>
   </div>
 
-  <!-- ================= TAB: PENGATURAN ================= -->
+  <!-- TAB: PENGATURAN -->
   <div v-else-if="activeTab==='pengaturan'" class="space-y-4">
     <div class="glass-card p-4">
-      <h2 class="font-display font-bold text-slate-800 mb-1">🗄️ Database (Google Sheets)</h2>
+      <h2 class="font-bold text-slate-800 mb-1">🗄️ Database (Google Sheets)</h2>
       <p class="text-xs text-slate-400 mb-3">{{ syncStatus.connected ? 'Data disinkronkan ke Google Sheets lewat Apps Script — semua perangkat yang membuka aplikasi ini dengan URL yang sama akan melihat data yang sama.' : 'Belum tersambung ke Google Sheets. Tempel URL Web App Apps Script Anda di bawah supaya data (Portofolio & Watchlist) tersimpan terpusat, bukan hanya di perangkat ini.' }}</p>
       <form @submit.prevent="connectScript" class="space-y-3">
-        <div>
-          <label class="text-xs text-slate-400 block mb-1">🔗 URL Web App Apps Script</label>
-          <input type="url" v-model="scriptUrlInput" placeholder="https://script.google.com/macros/s/xxx/exec" class="input-field">
-        </div>
+        <div><label class="text-xs text-slate-400 block mb-1">🔗 URL Web App Apps Script</label><input type="url" v-model="scriptUrlInput" placeholder="https://script.google.com/macros/s/xxx/exec" class="input-field"></div>
         <button type="submit" class="btn-primary w-full">🔗 Sambungkan</button>
       </form>
       <p class="text-xs mt-3" :class="syncStatus.state==='error' ? 'text-rose-600' : (syncStatus.connected ? 'text-emerald-600' : 'text-slate-500')">{{ syncStatus.message }}</p>
     </div>
   </div>
 
-  <!-- ================= FOOTER VERSI ================= -->
   <div class="text-center text-[11px] text-slate-500 mt-8 opacity-70">🚀 Tracking Saham {{ APP_VERSION }} · build {{ APP_BUILD }}</div>
 
-  <!-- ================= BOTTOM TAB BAR (mobile only) ================= -->
+  <!-- BOTTOM TAB BAR (mobile) -->
   <div class="lg:hidden fixed bottom-0 inset-x-0 z-50 px-4 pb-4">
     <div class="max-w-lg mx-auto flex gap-1 p-1.5 rounded-2xl glass-card">
-      <button v-for="t in tabs" :key="t.id" @click="activeTab=t.id"
-        class="tab-btn flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-[11px] font-semibold"
-        :style="activeTab===t.id
-          ? 'background:linear-gradient(135deg,#34D399,#0D9488); color:#052E27; box-shadow:0 8px 18px -6px rgba(16,185,129,.55);'
-          : 'color:#94A3B8;'">
-        <span class="text-base leading-none">{{ t.emoji }}</span>
-        <span>{{ t.label }}</span>
+      <button v-for="t in tabs" :key="t.id" @click="activeTab=t.id" class="tab-btn flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-[11px] font-semibold"
+        :style="activeTab===t.id ? 'background:linear-gradient(135deg,#34D399,#0D9488);color:#052E27;box-shadow:0 8px 18px -6px rgba(16,185,129,.55);' : 'color:#94A3B8;'">
+        <span class="text-base leading-none">{{ t.emoji }}</span><span>{{ t.label }}</span>
       </button>
     </div>
   </div>
@@ -413,7 +309,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 
 createApp({
   setup(){
-    const APP_VERSION = '2.1';
+    const APP_VERSION = '2.2';
     const APP_BUILD = '2026-09-30';
 
     const tabs = [
@@ -425,49 +321,45 @@ createApp({
     const activeTab = ref('ringkasan');
 
     // ---------- state ----------
-    const rows = ref([]);          // {id, date:'YYYY-MM-DD', dana, dividen, equity, ihsg}
-    const watchlist = ref([]);     // {id, kode, nama, eps, peMean, price, hargaWajar, mos, status, action, updatedAt}
+    const rows = ref([]);
+    const watchlist = ref([]);
     const editingId = ref(null);
     const editingWatchId = ref(null);
-    const loaded = ref(false);
     const yearFilter = ref('all');
 
     const fDate = ref(''); const fDana = ref('0'); const fEquity = ref(''); const fDividen = ref('0'); const fIhsg = ref('');
     const wKode = ref(''); const wNama = ref(''); const wEps = ref(''); const wPe = ref('');
+    const wBv = ref(''); const wDps = ref(''); const wRoe = ref(''); const wGr = ref('');
+    const wOwned = ref(false); const wAvg = ref('');
     const scriptUrlInput = ref(localStorage.getItem('apps-script-url') || '');
 
     const fmtRp = n => 'Rp' + Math.round(n).toLocaleString('id-ID');
     const fmtPct = n => (n===null||n===undefined||isNaN(n)) ? '—' : (n>=0?'+':'') + (n*100).toFixed(2) + '%';
-    const fmtDate = s => { const d = new Date(s+'T00:00:00'); return d.toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'}); };
-    const fmtMonth = s => { const d = new Date(s+'T00:00:00'); return d.toLocaleDateString('id-ID',{month:'long',year:'numeric'}); };
+    const fmtDate = s => new Date(s+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
+    const fmtMonth = s => new Date(s+'T00:00:00').toLocaleDateString('id-ID',{month:'long',year:'numeric'});
     const pctColor = v => v===null||v===undefined ? 'text-slate-400' : (v>=0 ? 'text-emerald-600' : 'text-rose-600');
     const cagrColor = v => v===null||v===undefined ? 'text-slate-500' : (v>=0 ? 'text-emerald-600' : 'text-rose-600');
 
     const hasClaudeStorage = (typeof window.storage !== 'undefined');
 
-    // ---------- Google Sheets (Apps Script) sebagai database pusat ----------
+    // ---------- Google Sheets (Apps Script) ----------
     const DEFAULT_SCRIPT_URL = '';
-    function getScriptUrl(){
-      return (DEFAULT_SCRIPT_URL || '').trim() || (localStorage.getItem('apps-script-url') || '').trim();
-    }
-    function setScriptUrl(url){
-      localStorage.setItem('apps-script-url', url.trim());
-    }
+    const getScriptUrl = () => (DEFAULT_SCRIPT_URL || '').trim() || (localStorage.getItem('apps-script-url') || '').trim();
+    const setScriptUrl = url => localStorage.setItem('apps-script-url', url.trim());
     const syncStatus = reactive({ connected: !!getScriptUrl(), state:'idle', message:'' });
 
-    function toApiPortfolioRow(r){
-      return { id:r.id, tanggal:r.date, dana:r.dana, dividen:r.dividen||0, equity:r.equity, ihsg:r.ihsg };
-    }
-    function fromApiPortfolioRow(r){
-      return { id:String(r.id), date:String(r.tanggal), dana:Number(r.dana)||0, dividen:Number(r.dividen)||0, equity:Number(r.equity)||0, ihsg:Number(r.ihsg)||0 };
-    }
+    const toApiPortfolioRow = r => ({ id:r.id, tanggal:r.date, dana:r.dana, dividen:r.dividen||0, equity:r.equity, ihsg:r.ihsg });
+    const fromApiPortfolioRow = r => ({ id:String(r.id), date:String(r.tanggal), dana:Number(r.dana)||0, dividen:Number(r.dividen)||0, equity:Number(r.equity)||0, ihsg:Number(r.ihsg)||0 });
+
     function fromApiWatchlistRow(r){
-      return {
-        id:String(r.id), kode:String(r.kode||'').toUpperCase(), nama:r.nama||'',
-        eps:Number(r.eps)||0, peMean:Number(r.peMean)||0, price:Number(r.price)||0,
-        hargaWajar:Number(r.hargaWajar)||0, mos:Number(r.mos)||0,
-        status:r.status||'', action:r.action||'', updatedAt:r.updatedAt||''
-      };
+      const n = v => Number(v)||0;
+      return { id:String(r.id), kode:String(r.kode||'').toUpperCase(), nama:r.nama||'',
+        eps:n(r.eps), epsGF:n(r.epsGF), peMean:n(r.peMean), bvps:n(r.bvps), dps:n(r.dps), roe:n(r.roe), growth:n(r.growth),
+        price:n(r.price), pe:n(r.pe), high52:n(r.high52), low52:n(r.low52), mcap:n(r.mcap),
+        fvPE:n(r.fvPE), fvGraham:n(r.fvGraham), fvDiv:n(r.fvDiv), hargaWajar:n(r.hargaWajar),
+        buyBelow:n(r.buyBelow), sellAbove:n(r.sellAbove), mos:n(r.mos), score:n(r.score),
+        status:r.status||'', action:r.action||'', priority:n(r.priority),
+        owned:(r.owned===true||r.owned==='true'||String(r.owned)==='1'), avgBuy:n(r.avgBuy), updatedAt:r.updatedAt||'' };
     }
 
     async function loadData(){
@@ -475,23 +367,18 @@ createApp({
       if(url){
         syncStatus.connected = true; syncStatus.state='loading'; syncStatus.message='Memuat data dari Google Sheets…';
         try{
-          const res = await fetch(url);
-          const json = await res.json();
-          if(json.ok){
-            rows.value = (json.portfolio||[]).map(fromApiPortfolioRow);
-            watchlist.value = (json.watchlist||[]).map(fromApiWatchlistRow);
-            localStorage.setItem('nav-tracker-data-cache', JSON.stringify(rows.value));
-            localStorage.setItem('watchlist-cache', JSON.stringify(watchlist.value));
-            syncStatus.state='idle'; syncStatus.message='Tersambung ke Google Sheets.';
-          } else {
-            throw new Error(json.error || 'Respons tidak valid');
-          }
+          const json = await (await fetch(url)).json();
+          if(!json.ok) throw new Error(json.error || 'Respons tidak valid');
+          rows.value = (json.portfolio||[]).map(fromApiPortfolioRow);
+          watchlist.value = (json.watchlist||[]).map(fromApiWatchlistRow).map(computeWatchlistRowLocal);
+          localStorage.setItem('nav-tracker-data-cache', JSON.stringify(rows.value));
+          localStorage.setItem('watchlist-cache', JSON.stringify(watchlist.value));
+          syncStatus.state='idle'; syncStatus.message='Tersambung ke Google Sheets.';
         }catch(e){
           console.error('Gagal memuat dari Google Sheets', e);
-          const cached = localStorage.getItem('nav-tracker-data-cache');
-          const cachedW = localStorage.getItem('watchlist-cache');
-          rows.value = cached ? JSON.parse(cached) : [];
-          watchlist.value = cachedW ? JSON.parse(cachedW) : [];
+          const c = localStorage.getItem('nav-tracker-data-cache'), cw = localStorage.getItem('watchlist-cache');
+          rows.value = c ? JSON.parse(c) : [];
+          watchlist.value = cw ? JSON.parse(cw) : [];
           syncStatus.state='error'; syncStatus.message='Gagal terhubung ke Google Sheets. Menampilkan data cache terakhir di perangkat ini.';
         }
       } else {
@@ -502,115 +389,129 @@ createApp({
             const w = await window.storage.get('watchlist-data', false);
             watchlist.value = (w && w.value) ? JSON.parse(w.value) : [];
           } else {
-            const raw = localStorage.getItem('nav-tracker-data');
+            const raw = localStorage.getItem('nav-tracker-data'), rawW = localStorage.getItem('watchlist-data');
             rows.value = raw ? JSON.parse(raw) : [];
-            const rawW = localStorage.getItem('watchlist-data');
             watchlist.value = rawW ? JSON.parse(rawW) : [];
           }
+          watchlist.value = watchlist.value.map(computeWatchlistRowLocal);
         }catch(e){ rows.value = []; watchlist.value = []; }
         syncStatus.connected = false; syncStatus.state='idle';
         syncStatus.message = 'Mode lokal — data hanya tersimpan di perangkat/browser ini. Sambungkan ke Google Sheets di tab Pengaturan supaya terpusat.';
       }
-      loaded.value = true;
+    }
+
+    async function postJson(payload){
+      const res = await fetch(getScriptUrl(), { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(payload) });
+      return res.json();
     }
 
     async function saveData(){
       localStorage.setItem('nav-tracker-data-cache', JSON.stringify(rows.value));
-      const url = getScriptUrl();
-      if(url){
+      if(getScriptUrl()){
         syncStatus.connected = true; syncStatus.state='saving'; syncStatus.message='Menyimpan ke Google Sheets…';
         try{
-          const res = await fetch(url, {
-            method:'POST',
-            headers:{'Content-Type':'text/plain;charset=utf-8'},
-            body: JSON.stringify({action:'savePortfolio', rows: rows.value.map(toApiPortfolioRow)})
-          });
-          const json = await res.json();
-          if(json.ok){
-            rows.value = (json.portfolio||[]).map(fromApiPortfolioRow);
-            syncStatus.state='idle'; syncStatus.message='Tersimpan ke Google Sheets.';
-          } else { throw new Error(json.error || 'Gagal menyimpan'); }
+          const json = await postJson({action:'savePortfolio', rows: rows.value.map(toApiPortfolioRow)});
+          if(!json.ok) throw new Error(json.error || 'Gagal menyimpan');
+          rows.value = (json.portfolio||[]).map(fromApiPortfolioRow);
+          syncStatus.state='idle'; syncStatus.message='Tersimpan ke Google Sheets.';
         }catch(e){
-          console.error('Gagal menyimpan ke Google Sheets', e);
-          syncStatus.state='error'; syncStatus.message='Gagal menyimpan ke Google Sheets. Perubahan disimpan sementara di perangkat ini saja.';
+          console.error(e); syncStatus.state='error'; syncStatus.message='Gagal menyimpan ke Google Sheets. Perubahan disimpan sementara di perangkat ini saja.';
         }
       } else {
         try{
-          if(hasClaudeStorage){ await window.storage.set('nav-tracker-data', JSON.stringify(rows.value), false); }
-          else { localStorage.setItem('nav-tracker-data', JSON.stringify(rows.value)); }
+          if(hasClaudeStorage) await window.storage.set('nav-tracker-data', JSON.stringify(rows.value), false);
+          else localStorage.setItem('nav-tracker-data', JSON.stringify(rows.value));
         }catch(e){ console.error('Gagal menyimpan', e); }
       }
     }
 
+    // ---------- LOGIKA WATCHLIST (harus sama dengan computeWatchlistRow di Code.gs) ----------
+    const TARGET_YIELD = 0.05;   // yield dividen target untuk metode Wajar Div
     function computeWatchlistRowLocal(r){
-      const eps = Number(r.eps)||0;
-      const peMean = Number(r.peMean)||0;
-      const price = Number(r.price)||0;
-      const hargaWajar = eps*peMean;
-      const mos = hargaWajar>0 ? (hargaWajar-price)/hargaWajar : 0;
-      const status = mos>=0.3 ? 'Beli' : 'Mahal';
-      const action = (hargaWajar>0 && price>=hargaWajar) ? 'Jual' : 'Hold';
-      return {...r, eps, peMean, price, hargaWajar, mos, status, action};
+      const n = v => Number(v)||0, cl = (v,a,b)=>Math.max(a,Math.min(b,v));
+      const eps = n(r.eps)||n(r.epsGF), peMean=n(r.peMean), bvps=n(r.bvps), dps=n(r.dps), roe=n(r.roe), growth=n(r.growth);
+      const price=n(r.price), hi=n(r.high52), lo=n(r.low52), owned=!!r.owned;
+      const fvPE = (eps>0&&peMean>0) ? eps*peMean : 0;
+      const fvGraham = (eps>0&&bvps>0) ? Math.sqrt(22.5*eps*bvps) : 0;
+      const fvDiv = dps>0 ? dps/TARGET_YIELD : 0;
+      const fvs = [fvPE,fvGraham,fvDiv].filter(v=>v>0);
+      const hargaWajar = fvs.length ? fvs.reduce((a,b)=>a+b,0)/fvs.length : 0;
+      const mos = (hargaWajar>0&&price>0) ? (hargaWajar-price)/hargaWajar : 0;
+      const pos52 = hi>lo ? cl((price-lo)/(hi-lo),0,1) : 0.5;
+      const yld = price>0 ? dps/price : 0;
+      let score = cl(mos/0.5,0,1)*40 + cl(roe/20,0,1)*20 + cl(growth/15,0,1)*20 + cl(yld/TARGET_YIELD,0,1)*10 + (1-pos52)*10;
+      if(eps<=0||hargaWajar<=0) score = 0;
+      score = Math.round(score);
+      let status;
+      if(eps<=0||hargaWajar<=0||price<=0) status='Data kurang';
+      else if(mos>=0.4&&score>=65) status='Beli Kuat';
+      else if(mos>=0.3&&score>=50) status='Beli';
+      else if(mos>=0.1) status='Tunggu';
+      else status='Mahal';
+      const ratio = hargaWajar>0 ? price/hargaWajar : 0;
+      let action = owned ? 'Hold' : '';
+      if(owned && hargaWajar>0 && price>0){
+        if(ratio>=1.2) action='Jual Semua'; else if(ratio>=1) action='Jual Sebagian';
+        else if(ratio>=0.9) action='Waspada'; else if(mos>=0.3) action='Tambah';
+      }
+      let priority = score/2;
+      if(owned&&action==='Jual Semua') priority=200+(ratio-1.2)*100;
+      else if(owned&&action==='Jual Sebagian') priority=180+(ratio-1)*100;
+      else if(owned&&action==='Waspada') priority=100;
+      else if(status==='Beli Kuat') priority=150+score;
+      else if(status==='Beli') priority=120+score;
+      else if(status==='Data kurang') priority=0;
+      return {...r, eps:n(r.eps), epsGF:n(r.epsGF), peMean, bvps, dps, roe, growth, price, fvPE, fvGraham, fvDiv,
+        hargaWajar, buyBelow:hargaWajar*0.7, sellAbove:hargaWajar, mos, score, status, action,
+        priority:Math.round(priority*10)/10, owned, avgBuy:n(r.avgBuy)};
     }
+
+    const SIG_CLS = {'Beli Kuat':'pill-gain','Beli':'pill-gain','Tunggu':'pill-amber','Mahal':'pill-loss','Data kurang':'pill-slate',
+      'Jual Semua':'pill-loss','Jual Sebagian':'pill-amber','Waspada':'pill-amber','Tambah':'pill-gain','Hold':'pill-slate'};
+    const SIG_ICO = {'Beli Kuat':'🟢🟢','Beli':'🟢','Tunggu':'⏳','Mahal':'🔴','Data kurang':'❔',
+      'Jual Semua':'🚨','Jual Sebagian':'🔔','Waspada':'⚠️','Tambah':'➕','Hold':'✋'};
+    function sig(w){ const k = (w.owned && w.action) ? w.action : w.status; return {label:(SIG_ICO[k]||'')+' '+k, cls:SIG_CLS[k]||'pill-slate'}; }
 
     async function saveWatchlist(){
       watchlist.value = watchlist.value.map(computeWatchlistRowLocal);
       localStorage.setItem('watchlist-cache', JSON.stringify(watchlist.value));
-      const url = getScriptUrl();
-      if(url){
+      if(getScriptUrl()){
         syncStatus.connected = true; syncStatus.state='saving'; syncStatus.message='Menyimpan watchlist ke Google Sheets…';
         try{
-          const res = await fetch(url, {
-            method:'POST',
-            headers:{'Content-Type':'text/plain;charset=utf-8'},
-            body: JSON.stringify({action:'saveWatchlist', rows: watchlist.value})
-          });
-          const json = await res.json();
-          if(json.ok){
-            watchlist.value = (json.watchlist||[]).map(fromApiWatchlistRow);
-            syncStatus.state='idle'; syncStatus.message='Watchlist tersimpan ke Google Sheets.';
-          } else { throw new Error(json.error || 'Gagal menyimpan'); }
+          const json = await postJson({action:'saveWatchlist', rows: watchlist.value});
+          if(!json.ok) throw new Error(json.error || 'Gagal menyimpan');
+          watchlist.value = (json.watchlist||[]).map(fromApiWatchlistRow);
+          syncStatus.state='idle'; syncStatus.message='Watchlist tersimpan ke Google Sheets.';
         }catch(e){
-          console.error('Gagal menyimpan watchlist', e);
-          syncStatus.state='error'; syncStatus.message='Gagal menyimpan watchlist ke Google Sheets.';
+          console.error(e); syncStatus.state='error'; syncStatus.message='Gagal menyimpan watchlist ke Google Sheets.';
         }
       } else {
         try{
-          if(hasClaudeStorage){ await window.storage.set('watchlist-data', JSON.stringify(watchlist.value), false); }
-          else { localStorage.setItem('watchlist-data', JSON.stringify(watchlist.value)); }
+          if(hasClaudeStorage) await window.storage.set('watchlist-data', JSON.stringify(watchlist.value), false);
+          else localStorage.setItem('watchlist-data', JSON.stringify(watchlist.value));
         }catch(e){ console.error('Gagal menyimpan watchlist', e); }
       }
     }
 
     async function refreshPrices(){
-      const url = getScriptUrl();
-      if(!url){
+      if(!getScriptUrl()){
         syncStatus.connected = false; syncStatus.state='error';
-        syncStatus.message = 'Ambil harga otomatis butuh koneksi ke Google Sheets (Apps Script) — sambungkan dulu di tab Pengaturan.';
+        syncStatus.message = 'Ambil data otomatis butuh koneksi ke Google Sheets (Apps Script) — sambungkan dulu di tab Pengaturan.';
         return;
       }
-      syncStatus.connected = true; syncStatus.state='saving'; syncStatus.message='Mengambil harga terbaru dari Google Finance… bisa 10–30 detik.';
+      syncStatus.connected = true; syncStatus.state='saving'; syncStatus.message='Mengambil data terbaru dari Google Finance… bisa 10–30 detik.';
       try{
-        const res = await fetch(url, {
-          method:'POST',
-          headers:{'Content-Type':'text/plain;charset=utf-8'},
-          body: JSON.stringify({action:'refreshPrices'})
-        });
-        const json = await res.json();
-        if(json.ok){
-          watchlist.value = (json.watchlist||[]).map(fromApiWatchlistRow);
-          syncStatus.state='idle'; syncStatus.message='Harga berhasil diperbarui dari Google Finance.';
-        } else { throw new Error(json.error || 'Gagal mengambil harga'); }
+        const json = await postJson({action:'refreshPrices'});
+        if(!json.ok) throw new Error(json.error || 'Gagal mengambil data');
+        watchlist.value = (json.watchlist||[]).map(fromApiWatchlistRow);
+        syncStatus.state='idle'; syncStatus.message='Data berhasil diperbarui dari Google Finance.';
       }catch(e){
-        console.error('Gagal refresh harga', e);
-        syncStatus.state='error'; syncStatus.message='Gagal mengambil harga terbaru. Pastikan Apps Script sudah di-deploy ulang (New version) dan kode saham benar.';
+        console.error(e); syncStatus.state='error';
+        syncStatus.message='Gagal mengambil data terbaru. Pastikan Apps Script sudah di-deploy ulang (New version) dan kode saham benar.';
       }
     }
 
-    async function connectScript(){
-      setScriptUrl(scriptUrlInput.value.trim());
-      await loadData();
-    }
+    async function connectScript(){ setScriptUrl(scriptUrlInput.value.trim()); await loadData(); }
 
     // ---------- mesin perhitungan NAB ----------
     function compute(){
@@ -618,10 +519,7 @@ createApp({
       let unitPrev = 0, nabPrev = 1000, ihsgPrev = null;
       const out = [];
       sorted.forEach((r,i)=>{
-        const dana = Number(r.dana)||0;
-        const dividen = Number(r.dividen)||0;
-        const equity = Number(r.equity)||0;
-        const ihsg = Number(r.ihsg)||0;
+        const dana = Number(r.dana)||0, dividen = Number(r.dividen)||0, equity = Number(r.equity)||0, ihsg = Number(r.ihsg)||0;
         const baseNab = i===0 ? 1000 : nabPrev;
         const newUnit = baseNab>0 ? dana/baseNab : 0;
         const totalUnit = unitPrev + newUnit;
@@ -636,9 +534,7 @@ createApp({
 
     function xirr(cashflows){
       if(cashflows.length < 2) return null;
-      const hasPos = cashflows.some(c=>c.amount>0);
-      const hasNeg = cashflows.some(c=>c.amount<0);
-      if(!hasPos || !hasNeg) return null;
+      if(!cashflows.some(c=>c.amount>0) || !cashflows.some(c=>c.amount<0)) return null;
       const d0 = cashflows[0].date;
       const yrs = d => (d - d0)/(365*86400000);
       let rate = 0.15;
@@ -646,8 +542,7 @@ createApp({
         let f=0, df=0;
         for(const cf of cashflows){
           const t = yrs(cf.date);
-          const denom = Math.pow(1+rate, t);
-          f += cf.amount/denom;
+          f += cf.amount/Math.pow(1+rate, t);
           df += -t*cf.amount/Math.pow(1+rate, t+1);
         }
         if(Math.abs(df) < 1e-10) break;
@@ -659,92 +554,68 @@ createApp({
       return isFinite(rate) ? rate : null;
     }
 
-    function computeCAGR(computedArr){
-      if(computedArr.length < 2) return {equity:null, nab:null, ihsg:null};
-      const first = computedArr[0], last = computedArr[computedArr.length-1];
+    function computeCAGR(arr){
+      if(arr.length < 2) return {equity:null, nab:null, ihsg:null};
+      const first = arr[0], last = arr[arr.length-1];
       const days = (new Date(last.date+'T00:00:00') - new Date(first.date+'T00:00:00'))/86400000;
       let nabCAGR = null, ihsgCAGR = null;
       if(days > 0){
         nabCAGR = Math.pow(last.nab/1000, 365/days) - 1;
         if(first.ihsg > 0) ihsgCAGR = Math.pow(last.ihsg/first.ihsg, 365/days) - 1;
       }
-      const cashflows = computedArr.map((r,i)=>{
+      const cashflows = arr.map((r,i)=>{
         let amt = -r.dana;
-        if(i===computedArr.length-1) amt += r.equity;
+        if(i===arr.length-1) amt += r.equity;
         return {date:new Date(r.date+'T00:00:00'), amount:amt};
       });
-      const equityCAGR = xirr(cashflows);
-      return {equity:equityCAGR, nab:nabCAGR, ihsg:ihsgCAGR};
+      return {equity:xirr(cashflows), nab:nabCAGR, ihsg:ihsgCAGR};
     }
 
     // ---------- filter per tahun ----------
-    function getYearOf(dateStr){ return new Date(dateStr+'T00:00:00').getFullYear(); }
-    function getAvailableYears(computedArr){
-      const yrs = new Set(computedArr.map(r=>getYearOf(r.date)));
-      return [...yrs].sort((a,b)=>b-a);
+    const getYearOf = s => new Date(s+'T00:00:00').getFullYear();
+    const getAvailableYears = arr => [...new Set(arr.map(r=>getYearOf(r.date)))].sort((a,b)=>b-a);
+    function getYearSlice(arr, year){
+      const yr = arr.filter(r => getYearOf(r.date) === year);
+      if(yr.length===0) return [];
+      const idx = arr.findIndex(r=>r.id===yr[0].id);
+      return idx > 0 ? [arr[idx-1], ...yr] : yr;
     }
-    function getYearSlice(computedArr, year){
-      const yearRows = computedArr.filter(r => getYearOf(r.date) === year);
-      if(yearRows.length===0) return [];
-      const idxFirst = computedArr.findIndex(r=>r.id===yearRows[0].id);
-      if(idxFirst > 0) return [computedArr[idxFirst-1], ...yearRows];
-      return yearRows;
-    }
-    function getYearStats(computedArr, year){
-      const slice = getYearSlice(computedArr, year);
+    function getYearStats(arr, year){
+      const slice = getYearSlice(arr, year);
       if(slice.length===0) return null;
       const first = slice[0], last = slice[slice.length-1];
-      const yearOnlyRows = computedArr.filter(r=>getYearOf(r.date)===year);
-      const nabReturn = first.nab>0 ? last.nab/first.nab - 1 : null;
-      const ihsgReturn = first.ihsg>0 ? last.ihsg/first.ihsg - 1 : null;
-      const totalDana = yearOnlyRows.reduce((a,r)=>a+r.dana,0);
-      const totalDividen = yearOnlyRows.reduce((a,r)=>a+(r.dividen||0),0);
-      return {slice, nabReturn, ihsgReturn, totalDana, totalDividen, equityEnd:last.equity, equityStart:first.equity};
+      const yr = arr.filter(r=>getYearOf(r.date)===year);
+      return { slice,
+        nabReturn: first.nab>0 ? last.nab/first.nab - 1 : null,
+        ihsgReturn: first.ihsg>0 ? last.ihsg/first.ihsg - 1 : null,
+        totalDana: yr.reduce((a,r)=>a+r.dana,0), totalDividen: yr.reduce((a,r)=>a+(r.dividen||0),0) };
     }
 
-    function buildChart(computedArr){
+    function shortMonth(s){ return new Date(s+'T00:00:00').toLocaleDateString('id-ID',{month:'short',year:'2-digit'}); }
+    function buildChart(arr){
       const w = 500, h = 170, padL = 34, padR = 8, padT = 10, padB = 22;
       const cw = w - padL - padR, ch = h - padT - padB;
-      const ihsg0 = computedArr[0].ihsg || 1;
-      const points = computedArr.map(r=>({date:r.date, nab:r.nab, ihsgIdx: (r.ihsg/ihsg0)*1000}));
+      const ihsg0 = arr[0].ihsg || 1;
+      const points = arr.map(r=>({date:r.date, nab:r.nab, ihsgIdx:(r.ihsg/ihsg0)*1000}));
       const maxY = Math.max(...points.map(p=>Math.max(p.nab,p.ihsgIdx)), 1000);
       const minY = Math.min(...points.map(p=>Math.min(p.nab,p.ihsgIdx)), 1000);
       const range = (maxY-minY) || 1;
-
       const x = i => padL + (points.length===1 ? cw/2 : (i/(points.length-1))*cw);
       const y = v => padT + ch - ((v-minY)/range)*ch;
-
-      const linePath = key => points.map((p,i)=> (i===0?'M':'L') + x(i).toFixed(1) + ',' + y(p[key]).toFixed(1)).join(' ');
-
-      const gridLines = [0,0.5,1].map(f=>{
-        const val = minY + f*range;
+      const linePath = k => points.map((p,i)=> (i===0?'M':'L') + x(i).toFixed(1) + ',' + y(p[k]).toFixed(1)).join(' ');
+      const grid = [0,0.5,1].map(f=>{
         const yy = padT + ch - f*ch;
-        return `<line x1="${padL}" y1="${yy}" x2="${w-padR}" y2="${yy}" stroke="rgba(15,23,42,.08)" stroke-width="1"/>
-        <text x="${padL-6}" y="${yy+3}" font-size="9" fill="rgba(30,41,59,.55)" text-anchor="end" font-family="Inter">${val.toFixed(0)}</text>`;
+        return `<line x1="${padL}" y1="${yy}" x2="${w-padR}" y2="${yy}" stroke="rgba(15,23,42,.08)"/><text x="${padL-6}" y="${yy+3}" font-size="9" fill="rgba(30,41,59,.55)" text-anchor="end">${(minY+f*range).toFixed(0)}</text>`;
       }).join('');
-
-      const labelStep = points.length > 6 ? Math.ceil(points.length/6) : 1;
-      const labels = points.map((p,i)=> (i%labelStep===0 || i===points.length-1) ?
-        `<text x="${x(i).toFixed(1)}" y="${h-4}" font-size="9" fill="rgba(30,41,59,.55)" text-anchor="middle" font-family="Inter">${shortMonth(p.date)}</text>` : '').join('');
-
-      const dotsNab = points.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p.nab).toFixed(1)}" r="3" fill="#34D399"/>`).join('');
-      const dotsIhsg = points.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p.ihsgIdx).toFixed(1)}" r="3" fill="#FBBF24"/>`).join('');
-
-      return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">
-        ${gridLines}
+      const step = points.length > 6 ? Math.ceil(points.length/6) : 1;
+      const labels = points.map((p,i)=> (i%step===0 || i===points.length-1) ? `<text x="${x(i).toFixed(1)}" y="${h-4}" font-size="9" fill="rgba(30,41,59,.55)" text-anchor="middle">${shortMonth(p.date)}</text>` : '').join('');
+      const dots = (k,c) => points.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p[k]).toFixed(1)}" r="3" fill="${c}"/>`).join('');
+      return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;">${grid}
         <path d="${linePath('ihsgIdx')}" fill="none" stroke="#FBBF24" stroke-width="2" stroke-dasharray="4,3"/>
-        <path d="${linePath('nab')}" fill="none" stroke="#34D399" stroke-width="2.5"/>
-        ${dotsIhsg}
-        ${dotsNab}
-        ${labels}
-      </svg>`;
-    }
-    function shortMonth(dateStr){
-      const d = new Date(dateStr+'T00:00:00');
-      return d.toLocaleDateString('id-ID',{month:'short',year:'2-digit'});
+        <path d="${linePath('nab')}" fill="none" stroke="#34D399" stroke-width="2.5"/>${dots('ihsgIdx','#FBBF24')}${dots('nab','#34D399')}${labels}</svg>`;
     }
 
-    // ---------- computed (reaktif, dipakai di template) ----------
+    // ---------- computed ----------
     const computedRows = computed(()=> compute());
     const reversedComputedRows = computed(()=> [...computedRows.value].reverse());
     const lastRow = computed(()=> computedRows.value[computedRows.value.length-1] || null);
@@ -760,37 +631,34 @@ createApp({
 
     const editingEntry = computed(()=> editingId.value ? rows.value.find(r=>r.id===editingId.value) : null);
     const editingWatch = computed(()=> editingWatchId.value ? watchlist.value.find(w=>w.id===editingWatchId.value) : null);
-    const sortedWatchlist = computed(()=> [...watchlist.value].sort((a,b)=>b.mos-a.mos));
-    const totalBeli = computed(()=> watchlist.value.filter(w=>w.status==='Beli').length);
+    const sortedWatchlist = computed(()=> [...watchlist.value].sort((a,b)=>b.priority-a.priority));
+    const totalBeli = computed(()=> watchlist.value.filter(w=>!w.owned && (w.status==='Beli'||w.status==='Beli Kuat')).length);
+    const totalJual = computed(()=> watchlist.value.filter(w=>w.owned && (w.action==='Jual Semua'||w.action==='Jual Sebagian')).length);
     const lastPriceUpdateLabel = computed(()=>{
-      const withUpdate = watchlist.value.find(w=>w.updatedAt);
-      return withUpdate ? fmtDate(withUpdate.updatedAt.slice(0,10)) : 'belum pernah';
+      const u = watchlist.value.find(w=>w.updatedAt);
+      return u ? fmtDate(u.updatedAt.slice(0,10)) : 'belum pernah';
     });
 
-    // ---------- form watch: sinkron saat masuk mode edit ----------
+    // ---------- form sync ----------
     function syncEntryForm(){
       const e = editingEntry.value;
-      fDate.value = e ? e.date : '';
-      fDana.value = e ? String(e.dana) : '0';
-      fEquity.value = e ? String(e.equity) : '';
-      fDividen.value = e ? String(e.dividen||0) : '0';
+      fDate.value = e ? e.date : ''; fDana.value = e ? String(e.dana) : '0';
+      fEquity.value = e ? String(e.equity) : ''; fDividen.value = e ? String(e.dividen||0) : '0';
       fIhsg.value = e ? String(e.ihsg) : '';
     }
     function syncWatchForm(){
-      const w = editingWatch.value;
-      wKode.value = w ? w.kode : '';
-      wNama.value = w ? (w.nama||'') : '';
-      wEps.value = w ? String(w.eps) : '';
-      wPe.value = w ? String(w.peMean) : '';
+      const w = editingWatch.value, s = v => (v===undefined||v===null||v===0) ? '' : String(v);
+      wKode.value = w ? w.kode : ''; wNama.value = w ? (w.nama||'') : '';
+      wEps.value = w ? s(w.eps) : ''; wPe.value = w ? s(w.peMean) : '';
+      wBv.value = w ? s(w.bvps) : ''; wDps.value = w ? s(w.dps) : '';
+      wRoe.value = w ? s(w.roe) : ''; wGr.value = w ? s(w.growth) : '';
+      wOwned.value = w ? !!w.owned : false; wAvg.value = w ? s(w.avgBuy) : '';
     }
 
     // ---------- actions ----------
     function submitEntry(){
-      const date = fDate.value;
-      const dana = parseFloat(fDana.value)||0;
-      const dividen = parseFloat(fDividen.value)||0;
-      const equity = parseFloat(fEquity.value);
-      const ihsg = parseFloat(fIhsg.value);
+      const date = fDate.value, dana = parseFloat(fDana.value)||0, dividen = parseFloat(fDividen.value)||0;
+      const equity = parseFloat(fEquity.value), ihsg = parseFloat(fIhsg.value);
       if(!date || isNaN(equity) || isNaN(ihsg)) return;
       if(editingId.value){
         const idx = rows.value.findIndex(r=>r.id===editingId.value);
@@ -799,8 +667,7 @@ createApp({
       } else {
         rows.value.push({id:'e_'+Date.now(), date, dana, dividen, equity, ihsg});
       }
-      syncEntryForm();
-      saveData();
+      syncEntryForm(); saveData();
     }
     function startEdit(id){ editingId.value = id; syncEntryForm(); }
     function cancelEditEntry(){ editingId.value = null; syncEntryForm(); }
@@ -808,19 +675,19 @@ createApp({
 
     function submitWatch(){
       const kode = wKode.value.trim().toUpperCase();
-      const nama = wNama.value.trim();
-      const eps = parseFloat(wEps.value);
       const peMean = parseFloat(wPe.value);
-      if(!kode || isNaN(eps) || isNaN(peMean)) return;
+      if(!kode || isNaN(peMean)) return;
+      const f = v => parseFloat(v)||0;
+      const data = { kode, nama:wNama.value.trim(), eps:f(wEps.value), peMean, bvps:f(wBv.value), dps:f(wDps.value),
+        roe:f(wRoe.value), growth:f(wGr.value), owned:wOwned.value, avgBuy:wOwned.value ? f(wAvg.value) : 0 };
       if(editingWatchId.value){
         const idx = watchlist.value.findIndex(w=>w.id===editingWatchId.value);
-        watchlist.value[idx] = {...watchlist.value[idx], kode, nama, eps, peMean};
+        watchlist.value[idx] = {...watchlist.value[idx], ...data};
         editingWatchId.value = null;
       } else {
-        watchlist.value.push({id:'w_'+Date.now(), kode, nama, eps, peMean, price:0, updatedAt:''});
+        watchlist.value.push({id:'w_'+Date.now(), ...data, price:0, updatedAt:''});
       }
-      syncWatchForm();
-      saveWatchlist();
+      syncWatchForm(); saveWatchlist();
     }
     function startEditWatch(id){ editingWatchId.value = id; syncWatchForm(); }
     function cancelEditWatch(){ editingWatchId.value = null; syncWatchForm(); }
@@ -831,17 +698,16 @@ createApp({
     return {
       APP_VERSION, APP_BUILD, tabs, activeTab,
       rows, watchlist, editingId, editingWatchId, yearFilter,
-      fDate, fDana, fEquity, fDividen, fIhsg, wKode, wNama, wEps, wPe, scriptUrlInput,
-      fmtRp, fmtPct, fmtDate, fmtMonth, pctColor, cagrColor,
+      fDate, fDana, fEquity, fDividen, fIhsg, wKode, wNama, wEps, wPe, wBv, wDps, wRoe, wGr, wOwned, wAvg, scriptUrlInput,
+      fmtRp, fmtPct, fmtDate, fmtMonth, pctColor, cagrColor, sig,
       syncStatus, connectScript, refreshPrices,
       computedRows, reversedComputedRows, lastRow, totalReturn, cagr, totalDividenAllTime,
       years, activeComputed, yearStats, prevYearStats, chartSvg, monthlyPerf,
-      editingEntry, editingWatch, sortedWatchlist, totalBeli, lastPriceUpdateLabel,
+      editingEntry, editingWatch, sortedWatchlist, totalBeli, totalJual, lastPriceUpdateLabel,
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
       submitWatch, startEditWatch, cancelEditWatch, deleteWatch,
       parseInt, Math
     };
-
   }
 }).mount('#app');
 </script>
