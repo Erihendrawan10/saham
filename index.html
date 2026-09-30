@@ -17,7 +17,6 @@
   .hero-glow{position:absolute;width:220px;height:220px;border-radius:9999px;background:radial-gradient(circle,rgba(255,255,255,.35),transparent 70%);top:-90px;right:-70px;opacity:.6;pointer-events:none}
   .input-field{width:100%;padding:.62rem .8rem;font-size:14px;color:#1E293B;background:rgba(255,255,255,.9);border:1px solid rgba(15,23,42,.14);border-radius:.9rem}
   .input-field:focus{outline:none;border-color:#10B981;background:#fff}
-  .input-field:disabled{opacity:.5}
   .btn-primary{background:linear-gradient(135deg,#34D399,#0D9488);color:#052E27;font-weight:700;font-size:14px;padding:.68rem;border:none;border-radius:.9rem;cursor:pointer;box-shadow:0 10px 24px -8px rgba(16,185,129,.4)}
   .btn-primary:active{transform:scale(.97)}
   .btn-secondary{background:rgba(15,23,42,.04);color:#334155;border:1px solid rgba(15,23,42,.12);font-weight:600;font-size:13px;padding:.62rem;border-radius:.9rem;cursor:pointer}
@@ -27,6 +26,8 @@
   .pill-loss{background:rgba(244,63,94,.12);color:#E11D48}
   .pill-amber{background:rgba(245,158,11,.14);color:#B45309}
   .pill-slate{background:rgba(100,116,139,.12);color:#475569}
+  .chip{font-size:12px;font-weight:600;padding:5px 12px;border-radius:9999px;border:1px solid rgba(15,23,42,.12);background:rgba(15,23,42,.03);color:#475569;cursor:pointer;white-space:nowrap}
+  .chip-on{background:linear-gradient(135deg,#34D399,#0D9488);color:#052E27;border-color:transparent}
   .dot{width:8px;height:8px;border-radius:9999px;display:inline-block}
   .tab-btn{transition:all .18s ease}
   .scrollbar-thin::-webkit-scrollbar{height:6px}
@@ -36,7 +37,6 @@
 <body>
 <div id="app" v-cloak class="max-w-lg lg:max-w-5xl mx-auto px-4 md:px-8 pt-7 pb-28 lg:pb-12">
 
-  <!-- HEADER -->
   <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between text-center lg:text-left mb-6 gap-4">
     <h1 class="font-extrabold text-2xl tracking-tight bg-clip-text text-transparent" style="background-image:linear-gradient(135deg,#059669,#0D9488,#10B981);-webkit-background-clip:text;">📈 Tracking Kinerja Saham</h1>
     <div class="hidden lg:flex gap-1 p-1.5 rounded-2xl glass-card">
@@ -186,94 +186,62 @@
     </div>
   </div>
 
-  <!-- TAB: WATCHLIST -->
+  <!-- TAB: WATCHLIST (SCREENER IDX) -->
   <div v-else-if="activeTab==='watchlist'" class="space-y-4">
     <div class="glass-card p-4">
-      <h2 class="font-bold text-slate-800 mb-1">{{ editingWatch ? '✏️ Ubah saham' : '🎯 Tambah ke watchlist' }}</h2>
-      <p class="text-xs text-slate-400 mb-3">Harga, PE, EPS, High/Low 52w &amp; Market Cap diambil otomatis dari Google Finance (IDX:KODE). Isi manual data fundamental di bawah (dari laporan keuangan).</p>
-      <form @submit.prevent="submitWatch" class="space-y-3">
-        <div class="flex gap-3">
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">🏷️ Kode (IDX)</label><input type="text" v-model="wKode" placeholder="BBCA" required class="input-field"></div>
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">🏢 Nama</label><input type="text" v-model="wNama" placeholder="Bank BCA" class="input-field"></div>
-        </div>
-        <div class="flex gap-3">
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">📐 EPS (kosong = pakai Google Finance)</label><input type="number" v-model="wEps" step="0.01" class="input-field"></div>
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">📊 Mean PE 5 Tahun</label><input type="number" v-model="wPe" step="0.01" required class="input-field"></div>
-        </div>
-        <div class="flex gap-3">
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">📚 BVPS (Rp)</label><input type="number" v-model="wBv" step="0.01" class="input-field"></div>
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">💎 DPS 12 bln (Rp)</label><input type="number" v-model="wDps" step="0.01" class="input-field"></div>
-        </div>
-        <div class="flex gap-3">
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">🏆 ROE (%)</label><input type="number" v-model="wRoe" step="0.01" class="input-field"></div>
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">🌱 Growth EPS (%/thn)</label><input type="number" v-model="wGr" step="0.01" class="input-field"></div>
-        </div>
-        <div class="flex gap-3 items-end">
-          <label class="flex-1 flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" v-model="wOwned"> 📦 Saya sudah punya</label>
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">💰 Harga beli rata-rata</label><input type="number" v-model="wAvg" step="0.01" :disabled="!wOwned" class="input-field"></div>
-        </div>
-        <div class="flex gap-2">
-          <button type="submit" class="btn-primary flex-1">{{ editingWatchId ? '💾 Simpan perubahan' : '🎯 Tambah' }}</button>
-          <button v-if="editingWatchId" type="button" @click="cancelEditWatch" class="btn-secondary flex-1">Batal</button>
-        </div>
-      </form>
-    </div>
-
-    <div class="glass-card p-4">
-      <h2 class="font-bold text-slate-800 mb-1">👁️ Prioritas beli &amp; jual</h2>
-      <p class="text-xs text-slate-400 mb-3">{{ watchlist.length }} saham · 🟢 {{ totalBeli }} sinyal beli · 🔔 {{ totalJual }} sinyal jual (yang sudah dimiliki). Urut dari prioritas tertinggi.</p>
-      <button @click="refreshPrices" class="btn-secondary w-full mb-3">🔄 Refresh Data (Google Finance)</button>
-      <div v-if="watchlist.length" class="overflow-x-auto scrollbar-thin">
-        <table class="w-full text-xs" style="min-width:860px;">
+      <h2 class="font-bold text-slate-800 mb-1">🔎 Screener Saham IDX</h2>
+      <p class="text-xs text-slate-400 mb-3">{{ screener.length }} saham dipindai · ✅ {{ totalLayak }} lolos kriteria · 🟢 {{ totalBeli }} sinyal beli · 🔔 {{ totalJual }} sinyal jual (yang dimiliki) · 📝 {{ totalPerluData }} perlu data fundamental.</p>
+      <button @click="runScreener" class="btn-secondary w-full mb-3">🔄 Ambil Data Google Finance &amp; Jalankan Screener</button>
+      <div class="flex gap-2 overflow-x-auto scrollbar-thin pb-2 mb-2">
+        <button v-for="f in filters" :key="f.id" @click="filterId=f.id" class="chip" :class="filterId===f.id ? 'chip-on' : ''">{{ f.label }}</button>
+      </div>
+      <div v-if="shownList.length" class="overflow-x-auto scrollbar-thin">
+        <table class="w-full text-xs" style="min-width:900px;">
           <thead><tr class="text-slate-400">
-            <th class="text-left pb-2">#</th><th class="text-left pb-2">Kode</th><th class="text-right pb-2">Price</th>
-            <th class="text-right pb-2">Wajar PE</th><th class="text-right pb-2">Wajar Graham</th><th class="text-right pb-2">Wajar Div</th>
+            <th class="text-left pb-2">#</th><th class="text-left pb-2">Kode</th><th class="text-right pb-2">Harga</th><th class="text-right pb-2">Transaksi/hari</th>
+            <th class="text-right pb-2">ROE</th><th class="text-right pb-2">DER</th><th class="text-right pb-2">PEG</th><th class="text-right pb-2">Yield</th>
             <th class="text-right pb-2">Harga Wajar</th><th class="text-right pb-2">Beli ≤</th><th class="text-right pb-2">Jual ≥</th>
-            <th class="text-right pb-2">MOS</th><th class="text-right pb-2">Skor</th><th class="text-center pb-2">Sinyal</th><th></th>
+            <th class="text-right pb-2">MOS</th><th class="text-right pb-2">Skor</th><th class="text-center pb-2">Strategi</th><th class="text-center pb-2">Sinyal</th>
           </tr></thead>
           <tbody>
-            <tr v-for="(w,i) in sortedWatchlist" :key="w.id" class="border-t border-slate-100" :style="w.owned ? 'background:rgba(245,158,11,.05)' : ''">
+            <tr v-for="(w,i) in shownList" :key="w.kode" class="border-t border-slate-100" :style="w.owned ? 'background:rgba(245,158,11,.05)' : ''">
               <td class="py-2 text-slate-400">{{ i+1 }}</td>
               <td class="py-2">
                 <div class="font-semibold text-slate-800">{{ w.kode }} <span v-if="w.owned" title="Sudah dimiliki">📦</span></div>
-                <div v-if="w.nama" class="text-[10px] text-slate-500">{{ w.nama }}</div>
+                <div class="text-[10px] text-slate-500">{{ w.nama || w.grup }}<span v-if="w.nama"> · {{ w.grup }}</span></div>
                 <div v-if="w.owned && w.avgBuy>0 && w.price>0" class="text-[10px]" :class="pctColor(w.price/w.avgBuy-1)">P/L {{ fmtPct(w.price/w.avgBuy-1) }}</div>
               </td>
               <td class="py-2 text-right text-slate-600">{{ w.price ? fmtRp(w.price) : '—' }}</td>
-              <td class="py-2 text-right text-slate-600">{{ w.fvPE ? fmtRp(w.fvPE) : '—' }}</td>
-              <td class="py-2 text-right text-slate-600">{{ w.fvGraham ? fmtRp(w.fvGraham) : '—' }}</td>
-              <td class="py-2 text-right text-slate-600">{{ w.fvDiv ? fmtRp(w.fvDiv) : '—' }}</td>
-              <td class="py-2 text-right font-semibold text-slate-800">{{ w.hargaWajar ? fmtRp(w.hargaWajar) : '—' }}</td>
+              <td class="py-2 text-right text-slate-600">{{ w.valueIDR ? fmtMiliar(w.valueIDR) : '—' }}</td>
+              <td class="py-2 text-right text-slate-600">{{ w.roeNow ? w.roeNow.toFixed(1)+'%' : '—' }}</td>
+              <td class="py-2 text-right text-slate-600">{{ w.der===null ? '—' : w.der.toFixed(2) }}</td>
+              <td class="py-2 text-right text-slate-600">{{ w.peg ? w.peg.toFixed(2) : '—' }}</td>
+              <td class="py-2 text-right text-slate-600">{{ w.dy ? (w.dy*100).toFixed(1)+'%' : '—' }}</td>
+              <td class="py-2 text-right font-semibold text-slate-800">{{ w.hargaWajar ? fmtRp(w.hargaWajar) : '—' }}<div class="text-[9px] font-normal text-slate-400">{{ w.metode }}</div></td>
               <td class="py-2 text-right text-emerald-700">{{ w.hargaWajar ? fmtRp(w.buyBelow) : '—' }}</td>
               <td class="py-2 text-right text-rose-600">{{ w.hargaWajar ? fmtRp(w.sellAbove) : '—' }}</td>
-              <td class="py-2 text-right font-medium" :class="pctColor(w.mos)">{{ fmtPct(w.mos) }}</td>
-              <td class="py-2 text-right font-semibold text-slate-700">{{ w.score }}</td>
+              <td class="py-2 text-right font-medium" :class="pctColor(w.mos)">{{ w.hargaWajar ? fmtPct(w.mos) : '—' }}</td>
+              <td class="py-2 text-right font-semibold text-slate-700">{{ w.skor }}</td>
+              <td class="py-2 text-center"><span class="pill" :class="w.strategi==='Tidak lolos' ? 'pill-slate' : (w.strategi==='Perlu data fundamental' ? 'pill-amber' : 'pill-gain')">{{ w.strategi }}</span></td>
               <td class="py-2 text-center"><span class="pill" :class="sig(w).cls">{{ sig(w).label }}</span></td>
-              <td class="py-2 text-right whitespace-nowrap">
-                <button @click="startEditWatch(w.id)" class="text-emerald-600 text-[11px] underline mr-2">Ubah</button>
-                <button @click="deleteWatch(w.id)" class="text-rose-600 text-[11px] underline">Hapus</button>
-              </td>
             </tr>
           </tbody>
         </table>
-        <p class="text-[11px] text-slate-500 mt-3">🕒 Update terakhir: {{ lastPriceUpdateLabel }}. Google Finance IDX bisa tertunda ±20 menit; otomatis tiap awal kuartal atau lewat tombol Refresh.</p>
+        <p class="text-[11px] text-slate-500 mt-3">🕒 Update terakhir: {{ lastUpdateLabel }}. Google Finance IDX bisa tertunda ±20 menit. Refresh memakan waktu 30–60 detik.</p>
       </div>
-      <div v-else class="text-center text-slate-500 text-sm py-6">Belum ada saham di watchlist.</div>
+      <div v-else class="text-center text-slate-500 text-sm py-6">{{ screener.length ? 'Tidak ada saham pada filter ini.' : 'Belum ada data. Sambungkan Google Sheets di tab Pengaturan lalu tekan tombol refresh.' }}</div>
     </div>
 
     <div class="glass-card p-4">
-      <h2 class="font-bold text-slate-800 mb-2">📋 Kriteria per kolom</h2>
+      <h2 class="font-bold text-slate-800 mb-2">📋 Kriteria &amp; metode</h2>
       <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed">
-        <li><b>Price</b> (GF): harga terakhir. <b>PE/EPS/High52/Low52/Market Cap</b> (GF) disimpan di Sheet; EPS GF dipakai jika EPS manual kosong.</li>
-        <li><b>Wajar PE</b> = EPS × Mean PE 5 tahun.</li>
-        <li><b>Wajar Graham</b> = √(22,5 × EPS × BVPS).</li>
-        <li><b>Wajar Div</b> = DPS ÷ 5% (harga saat yield dividen 5%).</li>
-        <li><b>Harga Wajar</b> = rata-rata metode yang datanya terisi. <b>Beli ≤</b> = 70% Harga Wajar (MOS 30%). <b>Jual ≥</b> = Harga Wajar.</li>
-        <li><b>MOS</b> = (Harga Wajar − Price) ÷ Harga Wajar.</li>
-        <li><b>Skor (0–100)</b>: MOS 40 (maks di 50%) + ROE 20 (maks di 20%) + Growth EPS 20 (maks di 15%) + Yield dividen 10 (maks di 5%) + posisi 52 minggu 10 (dekat low = tinggi).</li>
-        <li><b>Sinyal belum punya</b>: 🟢🟢 Beli Kuat (MOS ≥40% &amp; skor ≥65) · 🟢 Beli (MOS ≥30% &amp; skor ≥50) · ⏳ Tunggu (MOS ≥10%) · 🔴 Mahal.</li>
-        <li><b>Sinyal sudah punya</b>: 🚨 Jual Semua (≥120% wajar) · 🔔 Jual Sebagian (≥100%) · ⚠️ Waspada (≥90%) · ➕ Tambah (MOS ≥30%) · ✋ Hold.</li>
-        <li><b>Urutan</b>: Jual Semua → Jual Sebagian → Beli Kuat → Beli → Waspada → lainnya (berdasar skor).</li>
+        <li><b>Data Google Finance</b>: harga, PE, EPS, High/Low 52w, market cap, volume rata-rata. Transaksi harian = volume rata-rata × harga.</li>
+        <li><b>Data manual</b> (Google Finance tidak punya): isi di sheet <b>Fundamental</b> — BVPS, DPS, ROE sekarang, ROE terendah 5 th, DER, jumlah tahun laba positif, growth EPS, Mean PE 5 th, owned (1/0) &amp; harga beli rata-rata. Saham yang ada di sheet <b>Universe</b> otomatis dibuatkan barisnya; tempel seluruh kode IDX di sana untuk memindai semua emiten.</li>
+        <li><b>💎 Value/Dividen</b>: transaksi ≥ Rp10 M/hari · DER &lt; 1,0 (bank dikecualikan) · ROE ≥ 10% tiap tahun selama 5 th · laba positif ≥ 5 th · yield dividen ≥ 3%.</li>
+        <li><b>🚀 Growth</b>: transaksi &gt; Rp5 M/hari · ROE &gt; 15% · DER ≤ 0,8 (bank dikecualikan) · PEG ≤ 1,0 (PE ÷ growth EPS) · growth EPS ≥ 10% · laba positif ≥ 3 th.</li>
+        <li><b>Harga wajar per sektor</b>: bank = PBV, PE, DDM · defensif = PE, DDM, Graham · siklikal (energi/tambang/dasar) = PBV, Graham, DDM · properti = PBV, PE, Graham · growth = PEG, PE, Graham · umum = PE, Graham, DDM. Diambil rata-rata metode yang datanya ada (COE 13%).</li>
+        <li><b>Sinyal</b>: 🟢 Beli (harga ≤ wajar dikurangi MOS 30%; growth murni 20%) · ✋ Hold (di bawah harga wajar) · 🔔 Jual Sebagian (100–120% wajar, yang dimiliki) · 🚨 Jual (≥120% wajar, yang dimiliki) · 🔴 Mahal (belum punya, ≥ wajar).</li>
+        <li><b>Skor (0–100)</b>: MOS 40 + ROE 20 + Growth 20 + Yield 10 + posisi 52 minggu 10. Urutan tabel: Jual → Jual Sebagian → Beli (skor tertinggi) → Hold.</li>
       </ul>
     </div>
   </div>
@@ -282,7 +250,7 @@
   <div v-else-if="activeTab==='pengaturan'" class="space-y-4">
     <div class="glass-card p-4">
       <h2 class="font-bold text-slate-800 mb-1">🗄️ Database (Google Sheets)</h2>
-      <p class="text-xs text-slate-400 mb-3">{{ syncStatus.connected ? 'Data disinkronkan ke Google Sheets lewat Apps Script — semua perangkat yang membuka aplikasi ini dengan URL yang sama akan melihat data yang sama.' : 'Belum tersambung ke Google Sheets. Tempel URL Web App Apps Script Anda di bawah supaya data (Portofolio & Watchlist) tersimpan terpusat, bukan hanya di perangkat ini.' }}</p>
+      <p class="text-xs text-slate-400 mb-3">{{ syncStatus.connected ? 'Data disinkronkan ke Google Sheets lewat Apps Script — semua perangkat yang membuka aplikasi ini dengan URL yang sama akan melihat data yang sama.' : 'Belum tersambung ke Google Sheets. Tempel URL Web App Apps Script Anda di bawah supaya data (Portofolio & Screener) tersimpan terpusat.' }}</p>
       <form @submit.prevent="connectScript" class="space-y-3">
         <div><label class="text-xs text-slate-400 block mb-1">🔗 URL Web App Apps Script</label><input type="url" v-model="scriptUrlInput" placeholder="https://script.google.com/macros/s/xxx/exec" class="input-field"></div>
         <button type="submit" class="btn-primary w-full">🔗 Sambungkan</button>
@@ -293,7 +261,6 @@
 
   <div class="text-center text-[11px] text-slate-500 mt-8 opacity-70">🚀 Tracking Saham {{ APP_VERSION }} · build {{ APP_BUILD }}</div>
 
-  <!-- BOTTOM TAB BAR (mobile) -->
   <div class="lg:hidden fixed bottom-0 inset-x-0 z-50 px-4 pb-4">
     <div class="max-w-lg mx-auto flex gap-1 p-1.5 rounded-2xl glass-card">
       <button v-for="t in tabs" :key="t.id" @click="activeTab=t.id" class="tab-btn flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-[11px] font-semibold"
@@ -309,7 +276,7 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 
 createApp({
   setup(){
-    const APP_VERSION = '2.2';
+    const APP_VERSION = '3.0';
     const APP_BUILD = '2026-09-30';
 
     const tabs = [
@@ -320,20 +287,17 @@ createApp({
     ];
     const activeTab = ref('ringkasan');
 
-    // ---------- state ----------
     const rows = ref([]);
-    const watchlist = ref([]);
+    const screener = ref([]);
     const editingId = ref(null);
-    const editingWatchId = ref(null);
     const yearFilter = ref('all');
+    const filterId = ref('layak');
 
     const fDate = ref(''); const fDana = ref('0'); const fEquity = ref(''); const fDividen = ref('0'); const fIhsg = ref('');
-    const wKode = ref(''); const wNama = ref(''); const wEps = ref(''); const wPe = ref('');
-    const wBv = ref(''); const wDps = ref(''); const wRoe = ref(''); const wGr = ref('');
-    const wOwned = ref(false); const wAvg = ref('');
     const scriptUrlInput = ref(localStorage.getItem('apps-script-url') || '');
 
     const fmtRp = n => 'Rp' + Math.round(n).toLocaleString('id-ID');
+    const fmtMiliar = n => 'Rp' + (n/1e9).toLocaleString('id-ID',{maximumFractionDigits:1}) + ' M';
     const fmtPct = n => (n===null||n===undefined||isNaN(n)) ? '—' : (n>=0?'+':'') + (n*100).toFixed(2) + '%';
     const fmtDate = s => new Date(s+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
     const fmtMonth = s => new Date(s+'T00:00:00').toLocaleDateString('id-ID',{month:'long',year:'numeric'});
@@ -351,15 +315,14 @@ createApp({
     const toApiPortfolioRow = r => ({ id:r.id, tanggal:r.date, dana:r.dana, dividen:r.dividen||0, equity:r.equity, ihsg:r.ihsg });
     const fromApiPortfolioRow = r => ({ id:String(r.id), date:String(r.tanggal), dana:Number(r.dana)||0, dividen:Number(r.dividen)||0, equity:Number(r.equity)||0, ihsg:Number(r.ihsg)||0 });
 
-    function fromApiWatchlistRow(r){
-      const n = v => Number(v)||0;
-      return { id:String(r.id), kode:String(r.kode||'').toUpperCase(), nama:r.nama||'',
-        eps:n(r.eps), epsGF:n(r.epsGF), peMean:n(r.peMean), bvps:n(r.bvps), dps:n(r.dps), roe:n(r.roe), growth:n(r.growth),
-        price:n(r.price), pe:n(r.pe), high52:n(r.high52), low52:n(r.low52), mcap:n(r.mcap),
-        fvPE:n(r.fvPE), fvGraham:n(r.fvGraham), fvDiv:n(r.fvDiv), hargaWajar:n(r.hargaWajar),
-        buyBelow:n(r.buyBelow), sellAbove:n(r.sellAbove), mos:n(r.mos), score:n(r.score),
-        status:r.status||'', action:r.action||'', priority:n(r.priority),
-        owned:(r.owned===true||r.owned==='true'||String(r.owned)==='1'), avgBuy:n(r.avgBuy), updatedAt:r.updatedAt||'' };
+    function fromApiScreenerRow(r){
+      const n = v => Number(v)||0, nn = v => (v===''||v===null||v===undefined||isNaN(Number(v))) ? null : Number(v);
+      return { kode:String(r.kode||'').toUpperCase(), nama:r.nama||'', grup:r.grup||'umum',
+        price:n(r.price), valueIDR:n(r.valueIDR), roeNow:n(r.roeNow), roeMin5:nn(r.roeMin5), der:nn(r.der), labaThn:nn(r.labaThn),
+        growth:n(r.growth), peg:n(r.peg), dy:n(r.dy), pbv:n(r.pbv),
+        lolosValue:String(r.lolosValue)==='1', lolosGrowth:String(r.lolosGrowth)==='1', strategi:r.strategi||'Tidak lolos', metode:r.metode||'',
+        hargaWajar:n(r.hargaWajar), buyBelow:n(r.buyBelow), sellAbove:n(r.sellAbove), mos:n(r.mos), skor:n(r.skor),
+        sinyal:r.sinyal||'', priority:n(r.priority), owned:(r.owned===true||String(r.owned)==='1'), avgBuy:n(r.avgBuy), updatedAt:String(r.updatedAt||'') };
     }
 
     async function loadData(){
@@ -370,15 +333,15 @@ createApp({
           const json = await (await fetch(url)).json();
           if(!json.ok) throw new Error(json.error || 'Respons tidak valid');
           rows.value = (json.portfolio||[]).map(fromApiPortfolioRow);
-          watchlist.value = (json.watchlist||[]).map(fromApiWatchlistRow).map(computeWatchlistRowLocal);
+          screener.value = (json.screener||[]).map(fromApiScreenerRow);
           localStorage.setItem('nav-tracker-data-cache', JSON.stringify(rows.value));
-          localStorage.setItem('watchlist-cache', JSON.stringify(watchlist.value));
+          localStorage.setItem('screener-cache', JSON.stringify(screener.value));
           syncStatus.state='idle'; syncStatus.message='Tersambung ke Google Sheets.';
         }catch(e){
           console.error('Gagal memuat dari Google Sheets', e);
-          const c = localStorage.getItem('nav-tracker-data-cache'), cw = localStorage.getItem('watchlist-cache');
+          const c = localStorage.getItem('nav-tracker-data-cache'), cs = localStorage.getItem('screener-cache');
           rows.value = c ? JSON.parse(c) : [];
-          watchlist.value = cw ? JSON.parse(cw) : [];
+          screener.value = cs ? JSON.parse(cs) : [];
           syncStatus.state='error'; syncStatus.message='Gagal terhubung ke Google Sheets. Menampilkan data cache terakhir di perangkat ini.';
         }
       } else {
@@ -386,15 +349,12 @@ createApp({
           if(hasClaudeStorage){
             const r = await window.storage.get('nav-tracker-data', false);
             rows.value = (r && r.value) ? JSON.parse(r.value) : [];
-            const w = await window.storage.get('watchlist-data', false);
-            watchlist.value = (w && w.value) ? JSON.parse(w.value) : [];
           } else {
-            const raw = localStorage.getItem('nav-tracker-data'), rawW = localStorage.getItem('watchlist-data');
+            const raw = localStorage.getItem('nav-tracker-data');
             rows.value = raw ? JSON.parse(raw) : [];
-            watchlist.value = rawW ? JSON.parse(rawW) : [];
           }
-          watchlist.value = watchlist.value.map(computeWatchlistRowLocal);
-        }catch(e){ rows.value = []; watchlist.value = []; }
+        }catch(e){ rows.value = []; }
+        screener.value = [];
         syncStatus.connected = false; syncStatus.state='idle';
         syncStatus.message = 'Mode lokal — data hanya tersimpan di perangkat/browser ini. Sambungkan ke Google Sheets di tab Pengaturan supaya terpusat.';
       }
@@ -425,89 +385,28 @@ createApp({
       }
     }
 
-    // ---------- LOGIKA WATCHLIST (harus sama dengan computeWatchlistRow di Code.gs) ----------
-    const TARGET_YIELD = 0.05;   // yield dividen target untuk metode Wajar Div
-    function computeWatchlistRowLocal(r){
-      const n = v => Number(v)||0, cl = (v,a,b)=>Math.max(a,Math.min(b,v));
-      const eps = n(r.eps)||n(r.epsGF), peMean=n(r.peMean), bvps=n(r.bvps), dps=n(r.dps), roe=n(r.roe), growth=n(r.growth);
-      const price=n(r.price), hi=n(r.high52), lo=n(r.low52), owned=!!r.owned;
-      const fvPE = (eps>0&&peMean>0) ? eps*peMean : 0;
-      const fvGraham = (eps>0&&bvps>0) ? Math.sqrt(22.5*eps*bvps) : 0;
-      const fvDiv = dps>0 ? dps/TARGET_YIELD : 0;
-      const fvs = [fvPE,fvGraham,fvDiv].filter(v=>v>0);
-      const hargaWajar = fvs.length ? fvs.reduce((a,b)=>a+b,0)/fvs.length : 0;
-      const mos = (hargaWajar>0&&price>0) ? (hargaWajar-price)/hargaWajar : 0;
-      const pos52 = hi>lo ? cl((price-lo)/(hi-lo),0,1) : 0.5;
-      const yld = price>0 ? dps/price : 0;
-      let score = cl(mos/0.5,0,1)*40 + cl(roe/20,0,1)*20 + cl(growth/15,0,1)*20 + cl(yld/TARGET_YIELD,0,1)*10 + (1-pos52)*10;
-      if(eps<=0||hargaWajar<=0) score = 0;
-      score = Math.round(score);
-      let status;
-      if(eps<=0||hargaWajar<=0||price<=0) status='Data kurang';
-      else if(mos>=0.4&&score>=65) status='Beli Kuat';
-      else if(mos>=0.3&&score>=50) status='Beli';
-      else if(mos>=0.1) status='Tunggu';
-      else status='Mahal';
-      const ratio = hargaWajar>0 ? price/hargaWajar : 0;
-      let action = owned ? 'Hold' : '';
-      if(owned && hargaWajar>0 && price>0){
-        if(ratio>=1.2) action='Jual Semua'; else if(ratio>=1) action='Jual Sebagian';
-        else if(ratio>=0.9) action='Waspada'; else if(mos>=0.3) action='Tambah';
-      }
-      let priority = score/2;
-      if(owned&&action==='Jual Semua') priority=200+(ratio-1.2)*100;
-      else if(owned&&action==='Jual Sebagian') priority=180+(ratio-1)*100;
-      else if(owned&&action==='Waspada') priority=100;
-      else if(status==='Beli Kuat') priority=150+score;
-      else if(status==='Beli') priority=120+score;
-      else if(status==='Data kurang') priority=0;
-      return {...r, eps:n(r.eps), epsGF:n(r.epsGF), peMean, bvps, dps, roe, growth, price, fvPE, fvGraham, fvDiv,
-        hargaWajar, buyBelow:hargaWajar*0.7, sellAbove:hargaWajar, mos, score, status, action,
-        priority:Math.round(priority*10)/10, owned, avgBuy:n(r.avgBuy)};
-    }
+    // ---------- Screener ----------
+    const SIG_CLS = {'Beli':'pill-gain','Hold':'pill-slate','Jual Sebagian':'pill-amber','Jual':'pill-loss','Mahal':'pill-loss','Data kurang':'pill-slate','Di luar kriteria':'pill-slate'};
+    const SIG_ICO = {'Beli':'🟢','Hold':'✋','Jual Sebagian':'🔔','Jual':'🚨','Mahal':'🔴','Data kurang':'❔','Di luar kriteria':'➖'};
+    function sig(w){ const k = w.sinyal || 'Data kurang'; return {label:(SIG_ICO[k]||'')+' '+k, cls:SIG_CLS[k]||'pill-slate'}; }
 
-    const SIG_CLS = {'Beli Kuat':'pill-gain','Beli':'pill-gain','Tunggu':'pill-amber','Mahal':'pill-loss','Data kurang':'pill-slate',
-      'Jual Semua':'pill-loss','Jual Sebagian':'pill-amber','Waspada':'pill-amber','Tambah':'pill-gain','Hold':'pill-slate'};
-    const SIG_ICO = {'Beli Kuat':'🟢🟢','Beli':'🟢','Tunggu':'⏳','Mahal':'🔴','Data kurang':'❔',
-      'Jual Semua':'🚨','Jual Sebagian':'🔔','Waspada':'⚠️','Tambah':'➕','Hold':'✋'};
-    function sig(w){ const k = (w.owned && w.action) ? w.action : w.status; return {label:(SIG_ICO[k]||'')+' '+k, cls:SIG_CLS[k]||'pill-slate'}; }
-
-    async function saveWatchlist(){
-      watchlist.value = watchlist.value.map(computeWatchlistRowLocal);
-      localStorage.setItem('watchlist-cache', JSON.stringify(watchlist.value));
-      if(getScriptUrl()){
-        syncStatus.connected = true; syncStatus.state='saving'; syncStatus.message='Menyimpan watchlist ke Google Sheets…';
-        try{
-          const json = await postJson({action:'saveWatchlist', rows: watchlist.value});
-          if(!json.ok) throw new Error(json.error || 'Gagal menyimpan');
-          watchlist.value = (json.watchlist||[]).map(fromApiWatchlistRow);
-          syncStatus.state='idle'; syncStatus.message='Watchlist tersimpan ke Google Sheets.';
-        }catch(e){
-          console.error(e); syncStatus.state='error'; syncStatus.message='Gagal menyimpan watchlist ke Google Sheets.';
-        }
-      } else {
-        try{
-          if(hasClaudeStorage) await window.storage.set('watchlist-data', JSON.stringify(watchlist.value), false);
-          else localStorage.setItem('watchlist-data', JSON.stringify(watchlist.value));
-        }catch(e){ console.error('Gagal menyimpan watchlist', e); }
-      }
-    }
-
-    async function refreshPrices(){
+    async function runScreener(){
       if(!getScriptUrl()){
         syncStatus.connected = false; syncStatus.state='error';
-        syncStatus.message = 'Ambil data otomatis butuh koneksi ke Google Sheets (Apps Script) — sambungkan dulu di tab Pengaturan.';
+        syncStatus.message = 'Screener butuh koneksi ke Google Sheets (Apps Script) — sambungkan dulu di tab Pengaturan.';
+        activeTab.value = 'pengaturan';
         return;
       }
-      syncStatus.connected = true; syncStatus.state='saving'; syncStatus.message='Mengambil data terbaru dari Google Finance… bisa 10–30 detik.';
+      syncStatus.connected = true; syncStatus.state='saving'; syncStatus.message='Mengambil data Google Finance & menjalankan screener… bisa 30–60 detik.';
       try{
-        const json = await postJson({action:'refreshPrices'});
-        if(!json.ok) throw new Error(json.error || 'Gagal mengambil data');
-        watchlist.value = (json.watchlist||[]).map(fromApiWatchlistRow);
-        syncStatus.state='idle'; syncStatus.message='Data berhasil diperbarui dari Google Finance.';
+        const json = await postJson({action:'runScreener'});
+        if(!json.ok) throw new Error(json.error || 'Gagal menjalankan screener');
+        screener.value = (json.screener||[]).map(fromApiScreenerRow);
+        localStorage.setItem('screener-cache', JSON.stringify(screener.value));
+        syncStatus.state='idle'; syncStatus.message='Screener selesai diperbarui dari Google Finance.';
       }catch(e){
         console.error(e); syncStatus.state='error';
-        syncStatus.message='Gagal mengambil data terbaru. Pastikan Apps Script sudah di-deploy ulang (New version) dan kode saham benar.';
+        syncStatus.message='Gagal menjalankan screener. Pastikan Apps Script sudah di-deploy ulang (New version) dan Anda sudah memberi izin akses.';
       }
     }
 
@@ -571,7 +470,6 @@ createApp({
       return {equity:xirr(cashflows), nab:nabCAGR, ihsg:ihsgCAGR};
     }
 
-    // ---------- filter per tahun ----------
     const getYearOf = s => new Date(s+'T00:00:00').getFullYear();
     const getAvailableYears = arr => [...new Set(arr.map(r=>getYearOf(r.date)))].sort((a,b)=>b-a);
     function getYearSlice(arr, year){
@@ -628,34 +526,38 @@ createApp({
     const prevYearStats = computed(()=> yearFilter.value==='all' ? null : getYearStats(computedRows.value, parseInt(yearFilter.value)-1));
     const chartSvg = computed(()=> activeComputed.value.length>=2 ? buildChart(activeComputed.value) : '');
     const monthlyPerf = computed(()=> [...activeComputed.value.slice(1)].reverse());
-
     const editingEntry = computed(()=> editingId.value ? rows.value.find(r=>r.id===editingId.value) : null);
-    const editingWatch = computed(()=> editingWatchId.value ? watchlist.value.find(w=>w.id===editingWatchId.value) : null);
-    const sortedWatchlist = computed(()=> [...watchlist.value].sort((a,b)=>b.priority-a.priority));
-    const totalBeli = computed(()=> watchlist.value.filter(w=>!w.owned && (w.status==='Beli'||w.status==='Beli Kuat')).length);
-    const totalJual = computed(()=> watchlist.value.filter(w=>w.owned && (w.action==='Jual Semua'||w.action==='Jual Sebagian')).length);
-    const lastPriceUpdateLabel = computed(()=>{
-      const u = watchlist.value.find(w=>w.updatedAt);
+
+    const isLayak = w => w.lolosValue || w.lolosGrowth;
+    const filters = [
+      {id:'layak', label:'✅ Lolos kriteria'}, {id:'value', label:'💎 Value/Dividen'}, {id:'growth', label:'🚀 Growth'},
+      {id:'beli', label:'🟢 Sinyal beli'}, {id:'jual', label:'🔔 Sinyal jual'}, {id:'owned', label:'📦 Dimiliki'},
+      {id:'data', label:'📝 Perlu data'}, {id:'all', label:'Semua'}
+    ];
+    const shownList = computed(()=>{
+      const f = filterId.value;
+      const pass = {
+        layak: isLayak, value: w=>w.lolosValue, growth: w=>w.lolosGrowth, beli: w=>w.sinyal==='Beli',
+        jual: w=>w.owned && (w.sinyal==='Jual'||w.sinyal==='Jual Sebagian'), owned: w=>w.owned,
+        data: w=>w.strategi==='Perlu data fundamental', all: ()=>true }[f];
+      return screener.value.filter(pass).sort((a,b)=>b.priority-a.priority);
+    });
+    const totalLayak = computed(()=> screener.value.filter(isLayak).length);
+    const totalBeli = computed(()=> screener.value.filter(w=>w.sinyal==='Beli').length);
+    const totalJual = computed(()=> screener.value.filter(w=>w.owned && (w.sinyal==='Jual'||w.sinyal==='Jual Sebagian')).length);
+    const totalPerluData = computed(()=> screener.value.filter(w=>w.strategi==='Perlu data fundamental').length);
+    const lastUpdateLabel = computed(()=>{
+      const u = screener.value.find(w=>w.updatedAt);
       return u ? fmtDate(u.updatedAt.slice(0,10)) : 'belum pernah';
     });
 
-    // ---------- form sync ----------
     function syncEntryForm(){
       const e = editingEntry.value;
       fDate.value = e ? e.date : ''; fDana.value = e ? String(e.dana) : '0';
       fEquity.value = e ? String(e.equity) : ''; fDividen.value = e ? String(e.dividen||0) : '0';
       fIhsg.value = e ? String(e.ihsg) : '';
     }
-    function syncWatchForm(){
-      const w = editingWatch.value, s = v => (v===undefined||v===null||v===0) ? '' : String(v);
-      wKode.value = w ? w.kode : ''; wNama.value = w ? (w.nama||'') : '';
-      wEps.value = w ? s(w.eps) : ''; wPe.value = w ? s(w.peMean) : '';
-      wBv.value = w ? s(w.bvps) : ''; wDps.value = w ? s(w.dps) : '';
-      wRoe.value = w ? s(w.roe) : ''; wGr.value = w ? s(w.growth) : '';
-      wOwned.value = w ? !!w.owned : false; wAvg.value = w ? s(w.avgBuy) : '';
-    }
 
-    // ---------- actions ----------
     function submitEntry(){
       const date = fDate.value, dana = parseFloat(fDana.value)||0, dividen = parseFloat(fDividen.value)||0;
       const equity = parseFloat(fEquity.value), ihsg = parseFloat(fIhsg.value);
@@ -673,39 +575,17 @@ createApp({
     function cancelEditEntry(){ editingId.value = null; syncEntryForm(); }
     function deleteEntry(id){ rows.value = rows.value.filter(r=>r.id!==id); saveData(); }
 
-    function submitWatch(){
-      const kode = wKode.value.trim().toUpperCase();
-      const peMean = parseFloat(wPe.value);
-      if(!kode || isNaN(peMean)) return;
-      const f = v => parseFloat(v)||0;
-      const data = { kode, nama:wNama.value.trim(), eps:f(wEps.value), peMean, bvps:f(wBv.value), dps:f(wDps.value),
-        roe:f(wRoe.value), growth:f(wGr.value), owned:wOwned.value, avgBuy:wOwned.value ? f(wAvg.value) : 0 };
-      if(editingWatchId.value){
-        const idx = watchlist.value.findIndex(w=>w.id===editingWatchId.value);
-        watchlist.value[idx] = {...watchlist.value[idx], ...data};
-        editingWatchId.value = null;
-      } else {
-        watchlist.value.push({id:'w_'+Date.now(), ...data, price:0, updatedAt:''});
-      }
-      syncWatchForm(); saveWatchlist();
-    }
-    function startEditWatch(id){ editingWatchId.value = id; syncWatchForm(); }
-    function cancelEditWatch(){ editingWatchId.value = null; syncWatchForm(); }
-    function deleteWatch(id){ watchlist.value = watchlist.value.filter(w=>w.id!==id); saveWatchlist(); }
-
     onMounted(()=>{ loadData(); });
 
     return {
-      APP_VERSION, APP_BUILD, tabs, activeTab,
-      rows, watchlist, editingId, editingWatchId, yearFilter,
-      fDate, fDana, fEquity, fDividen, fIhsg, wKode, wNama, wEps, wPe, wBv, wDps, wRoe, wGr, wOwned, wAvg, scriptUrlInput,
-      fmtRp, fmtPct, fmtDate, fmtMonth, pctColor, cagrColor, sig,
-      syncStatus, connectScript, refreshPrices,
+      APP_VERSION, APP_BUILD, tabs, activeTab, rows, screener, editingId, yearFilter, filterId, filters,
+      fDate, fDana, fEquity, fDividen, fIhsg, scriptUrlInput,
+      fmtRp, fmtMiliar, fmtPct, fmtDate, fmtMonth, pctColor, cagrColor, sig,
+      syncStatus, connectScript, runScreener,
       computedRows, reversedComputedRows, lastRow, totalReturn, cagr, totalDividenAllTime,
-      years, activeComputed, yearStats, prevYearStats, chartSvg, monthlyPerf,
-      editingEntry, editingWatch, sortedWatchlist, totalBeli, totalJual, lastPriceUpdateLabel,
+      years, activeComputed, yearStats, prevYearStats, chartSvg, monthlyPerf, editingEntry,
+      shownList, totalLayak, totalBeli, totalJual, totalPerluData, lastUpdateLabel,
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
-      submitWatch, startEditWatch, cancelEditWatch, deleteWatch,
       parseInt, Math
     };
   }
