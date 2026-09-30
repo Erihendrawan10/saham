@@ -298,7 +298,8 @@
   <div v-else-if="activeTab==='watchlist'" class="space-y-4">
     <div class="glass-card p-4">
       <h2 class="font-display font-bold text-slate-800 mb-1">{{ editingWatch ? '✏️ Ubah saham' : '🎯 Tambah ke watchlist' }}</h2>
-      <p class="text-xs text-slate-400 mb-3">Kode pakai kode IDX (mis. BBCA, TLKM) — otomatis dicari sebagai IDX:{KODE} di Google Finance. EPS &amp; mean PE 5 tahun isi manual, idealnya diperbarui tiap ada laporan keuangan kuartalan baru. Kolom ROE, DER, Pertumbuhan EPS, dan Dividend Yield bersifat opsional, tapi makin lengkap makin akurat peringkat "Layak Beli".</p>
+      <p class="text-xs text-slate-400 mb-3">Kode pakai kode IDX (mis. BBCA, TLKM) — otomatis dicari sebagai {KODE}.JK di Yahoo Finance. EPS &amp; mean PE 5 tahun isi manual, idealnya diperbarui tiap ada laporan keuangan kuartalan baru.</p>
+      <form @submit.prevent="submitWatch" class="space-y-3">
         <div class="flex gap-3">
           <div class="flex-1">
             <label class="text-xs text-slate-400 block mb-1">🏷️ Kode Saham (IDX)</label>
@@ -319,26 +320,6 @@
             <input type="number" v-model="wPe" placeholder="18.5" step="0.01" required class="input-field">
           </div>
         </div>
-      <div class="flex gap-3">
-  <div class="flex-1">
-    <label class="text-xs text-slate-400 block mb-1">🏅 ROE (%) <span class="opacity-60">opsional</span></label>
-    <input type="number" v-model="wRoe" placeholder="20" step="0.01" class="input-field">
-  </div>
-  <div class="flex-1">
-    <label class="text-xs text-slate-400 block mb-1">🏦 DER (x) <span class="opacity-60">opsional</span></label>
-    <input type="number" v-model="wDer" placeholder="0.8" step="0.01" min="0" class="input-field">
-  </div>
-</div>
-<div class="flex gap-3">
-  <div class="flex-1">
-    <label class="text-xs text-slate-400 block mb-1">🌱 Pertumbuhan EPS/thn (%) <span class="opacity-60">opsional</span></label>
-    <input type="number" v-model="wGrowth" placeholder="12" step="0.01" class="input-field">
-  </div>
-  <div class="flex-1">
-    <label class="text-xs text-slate-400 block mb-1">💎 Dividend Yield (%) <span class="opacity-60">opsional</span></label>
-    <input type="number" v-model="wDy" placeholder="3" step="0.01" min="0" class="input-field">
-  </div>
-</div>
         <div class="flex gap-2">
           <button type="submit" class="btn-primary flex-1">{{ editingWatchId ? '💾 Simpan perubahan' : '🎯 Tambah ke watchlist' }}</button>
           <button v-if="editingWatchId" type="button" @click="cancelEditWatch" class="btn-secondary flex-1">Batal</button>
@@ -350,7 +331,7 @@
     <div class="glass-card p-4">
       <h2 class="font-display font-bold text-slate-800 mb-1">👁️ Daftar watchlist</h2>
       <p class="text-xs text-slate-400 mb-3">{{ watchlist.length }} saham dipantau &middot; {{ totalBeli }} sinyal 🟢 Beli saat ini.</p>
-     <button @click="refreshPrices" class="btn-secondary w-full mb-3">🔄 Refresh Harga (Google Finance)</button>
+      <button @click="refreshPrices" class="btn-secondary w-full mb-3">🔄 Refresh Harga (Yahoo Finance)</button>
 
       <div v-if="watchlist.length" class="overflow-x-auto scrollbar-thin">
         <table class="w-full text-xs" style="min-width:560px;">
@@ -392,30 +373,6 @@
       <div v-else class="text-center text-slate-500 text-sm py-6">Belum ada saham di watchlist.</div>
     </div>
   </div>
-  <div class="glass-card p-4">
-  <h2 class="font-display font-bold text-slate-800 mb-1">🏅 Peringkat Layak Beli</h2>
-  <p class="text-xs text-slate-400 mb-3">Dari saham berstatus 🟢 Beli, diurutkan dengan skor multi-faktor 0–100: Valuasi/MOS (Graham–Buffett) 40 · Earnings Yield (Greenblatt) 10 · ROE (Buffett) 15 · DER (Graham) 10 · PEG (Lynch) 15 · Dividend Yield 10. Faktor yang datanya kosong dilewati, bobotnya dihitung ulang.</p>
-  <div v-if="rankedBeli.length===0" class="text-center text-slate-500 text-sm py-6">Belum ada saham berstatus Beli.</div>
-  <div v-for="(w,i) in rankedBeli" :key="w.id" class="py-3 border-t border-slate-100 first:border-0">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <span class="text-lg font-extrabold text-slate-300 w-6">{{ i+1 }}</span>
-        <div>
-          <div class="font-semibold text-sm text-slate-800">{{ w.kode }} <span v-if="w.nama" class="text-[10px] text-slate-500 font-normal">{{ w.nama }}</span></div>
-          <div class="text-[11px] text-slate-400">MOS {{ fmtPct(w.mos) }} · Kelengkapan data {{ w.completeness }}%</div>
-        </div>
-      </div>
-      <div class="text-right">
-        <div class="font-display text-xl font-bold" :class="w.skor>=60 ? 'text-emerald-600' : (w.skor>=45 ? 'text-amber-600' : 'text-rose-600')">{{ w.skor.toFixed(0) }}</div>
-        <span class="pill" :class="w.grade==='A' ? 'pill-gain' : (w.grade==='B' ? 'pill-amber' : 'pill-slate')">{{ w.label }}</span>
-      </div>
-    </div>
-    <div class="flex flex-wrap gap-1.5 mt-2">
-      <span v-for="f in w.factors" :key="f.name" class="pill pill-slate" style="font-weight:600;">{{ f.name }} {{ f.score.toFixed(0) }}</span>
-    </div>
-  </div>
-  <p class="text-[11px] text-slate-500 mt-3 leading-relaxed">Catatan: DER kurang relevan untuk bank/lembaga keuangan (kosongkan saja). Skor adalah alat bantu penyaringan, bukan rekomendasi investasi. Selalu cek laporan keuangan dan risiko sendiri.</p>
-</div>
 
   <!-- ================= TAB: PENGATURAN ================= -->
   <div v-else-if="activeTab==='pengaturan'" class="space-y-4">
@@ -477,7 +434,6 @@ createApp({
 
     const fDate = ref(''); const fDana = ref('0'); const fEquity = ref(''); const fDividen = ref('0'); const fIhsg = ref('');
     const wKode = ref(''); const wNama = ref(''); const wEps = ref(''); const wPe = ref('');
-    const wRoe = ref(''); const wDer = ref(''); const wGrowth = ref(''); const wDy = ref('');
     const scriptUrlInput = ref(localStorage.getItem('apps-script-url') || '');
 
     const fmtRp = n => 'Rp' + Math.round(n).toLocaleString('id-ID');
@@ -502,7 +458,6 @@ createApp({
     function toApiPortfolioRow(r){
       return { id:r.id, tanggal:r.date, dana:r.dana, dividen:r.dividen||0, equity:r.equity, ihsg:r.ihsg };
     }
-    const optNum = v => { if(v===''||v===null||v===undefined) return ''; const n=Number(v); return isNaN(n)?'':n; };
     function fromApiPortfolioRow(r){
       return { id:String(r.id), date:String(r.tanggal), dana:Number(r.dana)||0, dividen:Number(r.dividen)||0, equity:Number(r.equity)||0, ihsg:Number(r.ihsg)||0 };
     }
@@ -511,8 +466,7 @@ createApp({
         id:String(r.id), kode:String(r.kode||'').toUpperCase(), nama:r.nama||'',
         eps:Number(r.eps)||0, peMean:Number(r.peMean)||0, price:Number(r.price)||0,
         hargaWajar:Number(r.hargaWajar)||0, mos:Number(r.mos)||0,
-        status:r.status||'', action:r.action||'',updatedAt:r.updatedAt||'',
-roe: optNum(r.roe), der: optNum(r.der), growth: optNum(r.growth), dy: optNum(r.dy)
+        status:r.status||'', action:r.action||'', updatedAt:r.updatedAt||''
       };
     }
 
@@ -635,7 +589,7 @@ roe: optNum(r.roe), der: optNum(r.der), growth: optNum(r.growth), dy: optNum(r.d
         syncStatus.message = 'Ambil harga otomatis butuh koneksi ke Google Sheets (Apps Script) — sambungkan dulu di tab Pengaturan.';
         return;
       }
-      syncStatus.connected = true; syncStatus.state='saving'; syncStatus.message='Mengambil harga terbaru dari Google Finance';
+      syncStatus.connected = true; syncStatus.state='saving'; syncStatus.message='Mengambil harga terbaru dari Yahoo Finance…';
       try{
         const res = await fetch(url, {
           method:'POST',
@@ -789,36 +743,7 @@ roe: optNum(r.roe), der: optNum(r.der), growth: optNum(r.growth), dy: optNum(r.d
       const d = new Date(dateStr+'T00:00:00');
       return d.toLocaleDateString('id-ID',{month:'short',year:'2-digit'});
     }
-function scoreStock(w){
-  const clamp = (v,a,b)=> Math.max(a,Math.min(b,v));
-  const has = v => v!=='' && v!==null && v!==undefined && !isNaN(v);
-  const factors = [];
-  // 1. Valuasi: Margin of Safety (Graham/Buffett). 30% -> 0, >=60% -> 100
-  factors.push({name:'MOS', weight:40, score: clamp((w.mos-0.30)/0.30,0,1)*100});
-  // 2. Earnings Yield (Greenblatt). 6% -> 0, >=15% -> 100
-  if(w.price>0 && w.eps>0){
-    const ey = w.eps/w.price;
-    factors.push({name:'EY', weight:10, score: clamp((ey-0.06)/0.09,0,1)*100});
-  }
-  // 3. Kualitas: ROE (Buffett). 10% -> 0, >=25% -> 100
-  if(has(w.roe)) factors.push({name:'ROE', weight:15, score: clamp((w.roe-10)/15,0,1)*100});
-  // 4. Keamanan neraca: DER (Graham). <=0.5 -> 100, >=2 -> 0
-  if(has(w.der)) factors.push({name:'DER', weight:10, score: clamp((2-w.der)/1.5,0,1)*100});
-  // 5. PEG (Peter Lynch). PEG<=1 -> 100, >=2 -> 0, growth<=0 -> 0
-  if(has(w.growth) && w.price>0 && w.eps>0){
-    const pe = w.price/w.eps;
-    const peg = w.growth>0 ? pe/w.growth : Infinity;
-    factors.push({name:'PEG', weight:15, score: isFinite(peg) ? clamp(2-peg,0,1)*100 : 0});
-  }
-  // 6. Dividend Yield. 0% -> 0, >=5% -> 100
-  if(has(w.dy)) factors.push({name:'DY', weight:10, score: clamp(w.dy/5,0,1)*100});
 
-  const totalW = factors.reduce((a,f)=>a+f.weight,0);
-  const skor = factors.reduce((a,f)=>a+f.score*f.weight,0)/totalW;
-  const grade = skor>=75 ? 'A' : (skor>=60 ? 'B' : (skor>=45 ? 'C' : 'D'));
-  const label = {A:'⭐ Prioritas', B:'👍 Layak', C:'🤔 Cukup', D:'⚠️ Lemah'}[grade];
-  return {skor, grade, label, factors, completeness: totalW};
-}
     // ---------- computed (reaktif, dipakai di template) ----------
     const computedRows = computed(()=> compute());
     const reversedComputedRows = computed(()=> [...computedRows.value].reverse());
@@ -837,10 +762,6 @@ function scoreStock(w){
     const editingWatch = computed(()=> editingWatchId.value ? watchlist.value.find(w=>w.id===editingWatchId.value) : null);
     const sortedWatchlist = computed(()=> [...watchlist.value].sort((a,b)=>b.mos-a.mos));
     const totalBeli = computed(()=> watchlist.value.filter(w=>w.status==='Beli').length);
-    const rankedBeli = computed(()=> watchlist.value
-  .filter(w=>w.status==='Beli')
-  .map(w=>({...w, ...scoreStock(w)}))
-  .sort((a,b)=>b.skor-a.skor));
     const lastPriceUpdateLabel = computed(()=>{
       const withUpdate = watchlist.value.find(w=>w.updatedAt);
       return withUpdate ? fmtDate(withUpdate.updatedAt.slice(0,10)) : 'belum pernah';
@@ -861,10 +782,6 @@ function scoreStock(w){
       wNama.value = w ? (w.nama||'') : '';
       wEps.value = w ? String(w.eps) : '';
       wPe.value = w ? String(w.peMean) : '';
-      wRoe.value = w && w.roe!=='' ? String(w.roe) : '';
-wDer.value = w && w.der!=='' ? String(w.der) : '';
-wGrowth.value = w && w.growth!=='' ? String(w.growth) : '';
-wDy.value = w && w.dy!=='' ? String(w.dy) : '';
     }
 
     // ---------- actions ----------
@@ -894,14 +811,14 @@ wDy.value = w && w.dy!=='' ? String(w.dy) : '';
       const nama = wNama.value.trim();
       const eps = parseFloat(wEps.value);
       const peMean = parseFloat(wPe.value);
-      const opt = v => { const n=parseFloat(v); return isNaN(n)?'':n; };
-const roe=opt(wRoe.value), der=opt(wDer.value), growth=opt(wGrowth.value), dy=opt(wDy.value);
       if(!kode || isNaN(eps) || isNaN(peMean)) return;
       if(editingWatchId.value){
         const idx = watchlist.value.findIndex(w=>w.id===editingWatchId.value);
-        watchlist.value[idx] = {...watchlist.value[idx], kode, nama, eps, peMean, roe, der, growth, dy};
-...
-watchlist.value.push({id:'w_'+Date.now(), kode, nama, eps, peMean, roe, der, growth, dy, price:0, updatedAt:''});
+        watchlist.value[idx] = {...watchlist.value[idx], kode, nama, eps, peMean};
+        editingWatchId.value = null;
+      } else {
+        watchlist.value.push({id:'w_'+Date.now(), kode, nama, eps, peMean, price:0, updatedAt:''});
+      }
       syncWatchForm();
       saveWatchlist();
     }
@@ -922,7 +839,7 @@ watchlist.value.push({id:'w_'+Date.now(), kode, nama, eps, peMean, roe, der, gro
       editingEntry, editingWatch, sortedWatchlist, totalBeli, lastPriceUpdateLabel,
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
       submitWatch, startEditWatch, cancelEditWatch, deleteWatch,
-      parseInt, Math,wRoe, wDer, wGrowth, wDy, rankedBeli
+      parseInt, Math
     };
   }
 }).mount('#app');
