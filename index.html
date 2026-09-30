@@ -373,7 +373,103 @@
       <div v-else class="text-center text-slate-500 text-sm py-6">Belum ada saham di watchlist.</div>
     </div>
   </div>
-
+<!-- ================= TAB: ANALISA (SISIPAN 2) ================= -->
+<div v-else-if="activeTab==='analisa'" class="space-y-4">
+ 
+  <div class="glass-card p-4">
+    <h2 class="font-display font-bold text-slate-800 mb-1">🔬 Analisa Ulang Watchlist</h2>
+    <p class="text-xs text-slate-400 mb-3">Data pasar diambil dari Google Finance (lewat Apps Script), digabung dengan EPS &amp; Mean PE 5 tahun dari tab Watchlist. Enam metode dinilai 0–100 lalu digabung jadi skor akhir.</p>
+    <div class="flex gap-3 items-end">
+      <div class="flex-1">
+        <label class="text-xs text-slate-400 block mb-1">🏦 Yield SBN 10 tahun (%)</label>
+        <input type="number" v-model="rfInput" @change="saveRf" step="0.01" min="0" class="input-field">
+      </div>
+      <button @click="runGF" :disabled="gfState.loading" class="btn-primary flex-1">{{ gfState.loading ? '⏳ Memproses…' : '🔬 Jalankan Analisa' }}</button>
+    </div>
+    <p v-if="gfState.msg" class="text-xs mt-3" :class="gfState.error ? 'text-rose-600' : 'text-slate-500'">{{ gfState.msg }}</p>
+    <p class="text-[11px] text-slate-500 mt-2">🕒 Data Google Finance terakhir: {{ gfAtLabel }}. Harga Google Finance untuk IDX bisa tertunda ±20 menit.</p>
+  </div>
+ 
+  <div v-if="watchlist.length===0" class="glass-card p-8 text-center text-slate-400 text-sm">Watchlist masih kosong. Tambahkan saham di tab Watchlist dulu.</div>
+ 
+  <template v-else>
+    <!-- Kesimpulan -->
+    <div class="hero-card">
+      <div class="hero-glow"></div>
+      <p class="text-emerald-50/80 text-xs font-semibold mb-1 relative">🎯 Kesimpulan saham layak beli</p>
+      <template v-if="layakList.length">
+        <p class="font-display text-2xl font-extrabold text-white relative">{{ layakList.map(a=>a.w.kode).join(' · ') }}</p>
+        <p class="text-[12px] text-emerald-50/85 mt-2 relative">Lolos semua saringan: skor ≥ 70, MOS ≥ 30%, likuid, dan tidak ada tanda bahaya keras.</p>
+      </template>
+      <template v-else>
+        <p class="font-display text-xl font-extrabold text-white relative">Belum ada yang layak beli</p>
+        <p class="text-[12px] text-emerald-50/85 mt-2 relative">{{ akumList.length ? 'Kandidat terdekat (akumulasi bertahap): ' + akumList.map(a=>a.w.kode).join(', ') + '.' : 'Tidak ada saham yang memenuhi syarat saat ini. Sabar menunggu harga turun lebih baik daripada memaksa masuk.' }}</p>
+      </template>
+      <p v-if="layakList.length && akumList.length" class="text-[12px] text-emerald-50/85 mt-1 relative">Akumulasi bertahap: {{ akumList.map(a=>a.w.kode).join(', ') }}.</p>
+      <p v-if="pendingCount" class="text-[11px] text-emerald-50/70 mt-2 relative">⚠️ {{ pendingCount }} saham belum dianalisa — klik "Jalankan Analisa".</p>
+    </div>
+ 
+    <!-- Kartu per saham -->
+    <div v-for="a in analyzedSorted" :key="a.w.id" class="glass-card p-4">
+      <div class="flex items-start justify-between gap-2 mb-2">
+        <div>
+          <div class="font-display font-bold text-slate-800 text-lg leading-tight">{{ a.w.kode }}</div>
+          <div class="text-[11px] text-slate-500">{{ a.w.nama || '—' }}</div>
+        </div>
+        <div class="text-right">
+          <span class="pill" :class="vClass(a.verdict)">{{ a.verdict }}</span>
+          <div v-if="a.ready" class="text-[11px] text-slate-400 mt-1">Skor <b class="text-slate-700">{{ fmtNum(a.score,0) }}</b>/100</div>
+        </div>
+      </div>
+ 
+      <div v-if="!a.ready" class="text-xs text-slate-500">Belum ada data Google Finance untuk saham ini. Jalankan analisa, dan pastikan kode IDX benar.</div>
+ 
+      <template v-else>
+        <div class="grid grid-cols-2 gap-x-4 text-xs mb-3">
+          <div class="flex justify-between py-1"><span class="text-slate-400">Harga (GF)</span><span class="font-semibold text-slate-800">{{ fmtRp(a.price) }}</span></div>
+          <div class="flex justify-between py-1"><span class="text-slate-400">Per lot (100 lbr)</span><span class="font-semibold text-slate-800">{{ fmtRp(a.price*100) }}</span></div>
+          <div class="flex justify-between py-1"><span class="text-slate-400">Harga wajar</span><span class="font-semibold text-slate-800">{{ fmtRp(a.w.hargaWajar) }}</span></div>
+          <div class="flex justify-between py-1"><span class="text-slate-400">MOS</span><span class="font-semibold" :class="pctColor(a.mos)">{{ fmtPct(a.mos) }}</span></div>
+          <div class="flex justify-between py-1"><span class="text-slate-400">Beli ideal ≤ (MOS 30%)</span><span class="font-semibold text-slate-800">{{ fmtRp(a.w.hargaWajar*0.7) }}</span></div>
+          <div class="flex justify-between py-1"><span class="text-slate-400">PE kini / Mean PE</span><span class="font-semibold text-slate-800">{{ fmtNum(a.peNow) }}x / {{ fmtNum(a.w.peMean) }}x</span></div>
+          <div class="flex justify-between py-1"><span class="text-slate-400">Earnings yield vs SBN</span><span class="font-semibold" :class="pctColor(a.ey===null?null:a.ey-a.rf)">{{ a.ey===null ? '—' : fmtNum(a.ey*100,2)+'% vs '+fmtNum(a.rf*100,2)+'%' }}</span></div>
+          <div class="flex justify-between py-1"><span class="text-slate-400">RSI 14</span><span class="font-semibold text-slate-800">{{ fmtNum(a.g.rsi14,0) }}</span></div>
+          <div class="flex justify-between py-1"><span class="text-slate-400">Tren (SMA50/200)</span><span class="font-semibold text-slate-800">{{ a.trend }}</span></div>
+          <div class="flex justify-between py-1"><span class="text-slate-400">Posisi 52 minggu</span><span class="font-semibold text-slate-800">{{ a.posPct===null ? '—' : fmtNum(a.posPct,0)+'% dari low' }}</span></div>
+          <div class="flex justify-between py-1"><span class="text-slate-400">Transaksi/hari</span><span class="font-semibold text-slate-800">{{ fmtMiliar(a.g.avgValue) }}</span></div>
+          <div class="flex justify-between py-1"><span class="text-slate-400">Volatilitas tahunan</span><span class="font-semibold text-slate-800">{{ a.g.vol===null ? '—' : fmtNum(a.g.vol*100,0)+'%' }}</span></div>
+        </div>
+ 
+        <div class="space-y-1.5">
+          <div v-for="m in methodDefs" :key="m.k">
+            <div class="flex justify-between text-[11px] text-slate-500 mb-0.5"><span>{{ m.l }} <span class="text-slate-400">(bobot {{ m.w }}%)</span></span><span>{{ a.s[m.k]===null ? '—' : fmtNum(a.s[m.k],0) }}</span></div>
+            <div class="h-1.5 rounded-full bg-slate-100"><div class="h-1.5 rounded-full" :style="{width:(a.s[m.k]||0)+'%', background:barColor(a.s[m.k])}"></div></div>
+          </div>
+        </div>
+ 
+        <ul v-if="a.flags.length" class="mt-3 space-y-1">
+          <li v-for="(f,i) in a.flags" :key="i" class="text-[11px] text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5">⚠️ {{ f }}</li>
+        </ul>
+      </template>
+    </div>
+ 
+    <!-- Metodologi -->
+    <div class="glass-card p-4">
+      <h2 class="font-display font-bold text-slate-800 mb-2">📚 Metodologi</h2>
+      <ol class="text-[11px] text-slate-500 leading-relaxed space-y-1.5 list-decimal pl-4">
+        <li><b>Valuasi intrinsik (30%)</b> — Margin of Safety terhadap Harga Wajar (EPS × Mean PE 5 th). Skor penuh di MOS ≥ 30%, nol di MOS −20%.</li>
+        <li><b>PE relatif (15%)</b> — PE berjalan Google Finance dibanding Mean PE 5 tahun. Skor penuh jika ≤ 0,7× rata-rata, nol jika ≥ 1,3×.</li>
+        <li><b>Earnings yield vs SBN (15%)</b> — EPS ÷ harga dibanding yield SBN 10 tahun (bisa diubah di atas). Saham layak memberi imbal hasil laba minimal di atas obligasi negara; skor penuh jika selisih ≥ +3%.</li>
+        <li><b>Tren teknikal (20%)</b> — harga terhadap SMA50 &amp; SMA200, golden cross, dan RSI 14. Menghindari "pisau jatuh" (value trap) dan area jenuh beli.</li>
+        <li><b>Posisi 52 minggu (10%)</b> — makin dekat low 52 minggu makin tinggi skor.</li>
+        <li><b>Likuiditas &amp; risiko (10%)</b> — rata-rata nilai transaksi harian 60 hari (skala Rp1 M–10 M) dan volatilitas tahunan.</li>
+      </ol>
+      <p class="text-[11px] text-slate-500 mt-3 leading-relaxed"><b>Saringan khusus IDX:</b> EPS ≤ 0 → Hindari; transaksi harian &lt; Rp1 miliar atau harga ≤ Rp50 (gocap) → tidak boleh berstatus Layak Beli; selisih EPS Google Finance vs input &gt; 25% → diberi peringatan agar EPS diperbarui.</p>
+      <p class="text-[11px] text-slate-500 mt-2 leading-relaxed"><b>Batasan:</b> Google Finance tidak menyediakan PBV, ROE, DER, atau dividend yield untuk saham IDX, jadi metode berbasis buku (Graham Number, analisa bank) belum termasuk. Ini alat bantu screening, bukan rekomendasi investasi — cek laporan keuangan dan berita emiten sebelum membeli.</p>
+    </div>
+  </template>
+</div>
+<!-- ================= AKHIR SISIPAN 2 ================= -->
   <!-- ================= TAB: PENGATURAN ================= -->
   <div v-else-if="activeTab==='pengaturan'" class="space-y-4">
     <div class="glass-card p-4">
@@ -420,6 +516,7 @@ createApp({
       { id:'ringkasan', emoji:'📊', label:'Ringkasan' },
       { id:'data', emoji:'💼', label:'Portofolio' },
       { id:'watchlist', emoji:'👁️', label:'Watchlist' },
+      { id:'analisa', emoji:'🔬', label:'Analisa' },
       { id:'pengaturan', emoji:'⚙️', label:'Pengaturan' },
     ];
     const activeTab = ref('ringkasan');
@@ -825,7 +922,140 @@ createApp({
     function startEditWatch(id){ editingWatchId.value = id; syncWatchForm(); }
     function cancelEditWatch(){ editingWatchId.value = null; syncWatchForm(); }
     function deleteWatch(id){ watchlist.value = watchlist.value.filter(w=>w.id!==id); saveWatchlist(); }
-
+SISIPAN 3 — SCRIPT. Di dalam <script>, tempel blok ini tepat SEBELUM baris:
+    onMounted(()=>{ loadData(); });
+================================================================
+-->
+<script type="text/plain" id="SISIPAN_3">
+    // ================= TAB ANALISA (SISIPAN 3) =================
+    const gfData = ref([]);
+    const gfState = reactive({ loading:false, msg:'', error:false, at:'' });
+    const rfInput = ref(localStorage.getItem('analisa-rf') || '6.5');
+    try{
+      const c = JSON.parse(localStorage.getItem('analisa-gf-cache') || 'null');
+      if(c){ gfData.value = c.data || []; gfState.at = c.at || ''; }
+    }catch(e){}
+ 
+    const methodDefs = [
+      { k:'val',  l:'Valuasi intrinsik (MOS)',   w:30 },
+      { k:'pe',   l:'PE relatif vs Mean PE',     w:15 },
+      { k:'ey',   l:'Earnings yield vs SBN',     w:15 },
+      { k:'tek',  l:'Tren teknikal',             w:20 },
+      { k:'pos',  l:'Posisi 52 minggu',          w:10 },
+      { k:'risk', l:'Likuiditas & risiko',       w:10 },
+    ];
+    const clamp01 = x => Math.max(0, Math.min(1, x));
+    const lin = (v, lo, hi) => clamp01((v - lo) / (hi - lo)) * 100;
+    const fmtNum = (n, d=1) => (n===null||n===undefined||isNaN(n)) ? '—' : Number(n).toFixed(d);
+    const fmtMiliar = n => (n===null||n===undefined||isNaN(n)) ? '—' : (n>=1e9 ? 'Rp'+(n/1e9).toFixed(1)+' M' : 'Rp'+(n/1e6).toFixed(0)+' jt');
+    const barColor = s => s===null||s===undefined ? '#CBD5E1' : (s>=70 ? '#10B981' : (s>=45 ? '#FBBF24' : '#F43F5E'));
+    const vClass = v => v==='Layak Beli' ? 'pill-gain' : (v==='Akumulasi Bertahap' ? 'pill-amber' : (v==='Hindari' ? 'pill-loss' : 'pill-slate'));
+ 
+    function saveRf(){ localStorage.setItem('analisa-rf', String(rfInput.value)); }
+ 
+    async function runGF(){
+      const url = getScriptUrl();
+      if(!url){ gfState.error = true; gfState.msg = 'Analisa butuh koneksi ke Google Sheets (Apps Script) — sambungkan dulu di tab Pengaturan.'; return; }
+      if(!watchlist.value.length){ gfState.error = true; gfState.msg = 'Watchlist masih kosong.'; return; }
+      gfState.loading = true; gfState.error = false;
+      gfState.msg = 'Mengambil data Google Finance… bisa 10–60 detik, mohon tunggu.';
+      try{
+        const res = await fetch(url, {
+          method:'POST',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body: JSON.stringify({action:'analyzeGF'})
+        });
+        const json = await res.json();
+        if(!json.ok) throw new Error(json.error || 'Gagal menganalisa');
+        gfData.value = json.analysis || [];
+        gfState.at = new Date().toISOString();
+        localStorage.setItem('analisa-gf-cache', JSON.stringify({ data: gfData.value, at: gfState.at }));
+        gfState.msg = 'Analisa berhasil diperbarui.';
+      }catch(e){
+        console.error('Gagal analisa GF', e);
+        gfState.error = true;
+        gfState.msg = 'Gagal mengambil data Google Finance. Pastikan Apps Script sudah di-deploy ulang (New version) dan kode saham benar.';
+      }
+      gfState.loading = false;
+    }
+ 
+    const analyzed = computed(()=>{
+      const rf = (parseFloat(rfInput.value) || 6.5) / 100;
+      return watchlist.value.map(w=>{
+        const g = gfData.value.find(x=>x.kode===w.kode);
+        if(!g || !g.price) return { w, g:null, ready:false, verdict:'Belum dianalisa', score:-1, flags:[], s:{} };
+ 
+        const price = g.price;
+        const eps = Number(w.eps) || 0;
+        const fair = Number(w.hargaWajar) || 0;
+        const mos = fair>0 ? (fair-price)/fair : null;
+        const peNow = g.pe>0 ? g.pe : (eps>0 ? price/eps : null);
+        const ey = eps>0 ? eps/price : null;
+        const posPct = (g.high52>g.low52) ? clamp01((price-g.low52)/(g.high52-g.low52))*100 : null;
+ 
+        const s = {};
+        s.val = mos===null ? null : lin(mos, -0.2, 0.3);
+        s.pe  = (peNow && w.peMean>0) ? lin(1.3 - peNow/w.peMean, 0, 0.6) : null;
+        s.ey  = ey===null ? null : lin(ey - rf, -0.02, 0.03);
+ 
+        let t = null;
+        if(g.sma50 || g.sma200){
+          t = 0;
+          if(g.sma200 && price>g.sma200) t += 30;
+          if(g.sma50 && price>g.sma50) t += 20;
+          if(g.sma50 && g.sma200 && g.sma50>g.sma200) t += 20;
+          if(g.rsi14!==null && g.rsi14!==undefined) t += g.rsi14<30 ? 25 : (g.rsi14<=60 ? 30 : (g.rsi14<=70 ? 15 : 0));
+        }
+        s.tek = t;
+        s.pos = posPct===null ? null : 100 - posPct;
+ 
+        const liq = (g.avgValue!==null && g.avgValue!==undefined) ? lin(Math.log10(Math.max(g.avgValue,1)), 9, 10) : null;
+        const volS = (g.vol!==null && g.vol!==undefined) ? 100 - lin(g.vol, 0.25, 0.65) : null;
+        s.risk = (liq!==null || volS!==null) ? (liq===null?50:liq)*0.6 + (volS===null?50:volS)*0.4 : null;
+ 
+        let sum = 0, wsum = 0;
+        methodDefs.forEach(m=>{ if(s[m.k]!==null && s[m.k]!==undefined){ sum += s[m.k]*m.w; wsum += m.w; } });
+        const score = wsum>0 ? sum/wsum : 0;
+ 
+        // ---- saringan & peringatan khusus IDX ----
+        const flags = []; let hard = false, cap = false;
+        if(eps<=0){ hard = true; flags.push('EPS ≤ 0 (emiten merugi) — metode berbasis laba tidak berlaku.'); }
+        if(g.avgValue!==null && g.avgValue!==undefined && g.avgValue<1e9){ cap = true; flags.push('Likuiditas sangat rendah (transaksi < Rp1 miliar/hari) — risiko sulit jual.'); }
+        if(price<=50){ cap = true; flags.push('Harga di level gocap (Rp50) — risiko papan pemantauan khusus/suspensi.'); }
+        if(g.eps>0 && eps>0 && Math.abs(g.eps/eps-1)>0.25) flags.push('EPS Google Finance ('+fmtNum(g.eps,0)+') beda >25% dari input ('+fmtNum(eps,0)+') — perbarui EPS di tab Watchlist.');
+        if(g.rsi14>70) flags.push('RSI > 70 (jenuh beli) — pertimbangkan menunggu koreksi.');
+        if(g.rsi14<30) flags.push('RSI < 30 (jenuh jual) — bisa jadi peluang, tapi pastikan bukan penurunan fundamental.');
+        if(mos!==null && mos>=0.3 && g.sma200 && price<g.sma200) flags.push('Murah tapi masih di bawah SMA200 — waspada value trap, akumulasi bertahap lebih aman.');
+        if(g.ret6m!==null && g.ret6m!==undefined && g.ret6m<-0.3) flags.push('Turun '+fmtNum(g.ret6m*100,0)+'% dalam 6 bulan — cek berita/laporan keuangan terbaru.');
+ 
+        let verdict;
+        if(hard) verdict = 'Hindari';
+        else if(score>=70 && mos!==null && mos>=0.3) verdict = 'Layak Beli';
+        else if(score>=58 && mos!==null && mos>=0.15) verdict = 'Akumulasi Bertahap';
+        else if(score>=45) verdict = 'Tunggu';
+        else verdict = 'Hindari';
+        if(cap && (verdict==='Layak Beli' || verdict==='Akumulasi Bertahap')) verdict = 'Tunggu';
+ 
+        let trend = '—';
+        if(g.sma50 && g.sma200){
+          trend = (price>g.sma200 ? 'Di atas SMA200' : 'Di bawah SMA200') + (g.sma50>g.sma200 ? ' · golden' : ' · death');
+        } else if(g.sma50){ trend = price>g.sma50 ? 'Di atas SMA50' : 'Di bawah SMA50'; }
+ 
+        return { w, g, ready:true, price, mos, peNow, ey, rf, posPct, s, score, flags, verdict, trend };
+      });
+    });
+    const analyzedSorted = computed(()=> [...analyzed.value].sort((a,b)=> b.score - a.score));
+    const layakList = computed(()=> analyzedSorted.value.filter(a=>a.verdict==='Layak Beli'));
+    const akumList = computed(()=> analyzedSorted.value.filter(a=>a.verdict==='Akumulasi Bertahap'));
+    const pendingCount = computed(()=> analyzed.value.filter(a=>!a.ready).length);
+    const gfAtLabel = computed(()=> gfState.at ? new Date(gfState.at).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'belum pernah dijalankan');
+ 
+    const analisa = {
+      gfState, rfInput, saveRf, runGF, methodDefs, fmtNum, fmtMiliar, barColor, vClass,
+      analyzedSorted, layakList, akumList, pendingCount, gfAtLabel
+    };
+    // ================= AKHIR SISIPAN 3 =================
+</script>
     onMounted(()=>{ loadData(); });
 
     return {
@@ -839,7 +1069,8 @@ createApp({
       editingEntry, editingWatch, sortedWatchlist, totalBeli, lastPriceUpdateLabel,
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
       submitWatch, startEditWatch, cancelEditWatch, deleteWatch,
-      parseInt, Math
+      "parseInt, Math,")
+    ...analisa
     };
   }
 }).mount('#app');
