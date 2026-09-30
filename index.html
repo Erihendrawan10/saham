@@ -298,8 +298,7 @@
   <div v-else-if="activeTab==='watchlist'" class="space-y-4">
     <div class="glass-card p-4">
       <h2 class="font-display font-bold text-slate-800 mb-1">{{ editingWatch ? '✏️ Ubah saham' : '🎯 Tambah ke watchlist' }}</h2>
-      <p class="text-xs text-slate-400 mb-3">Kode pakai kode IDX (mis. BBCA, TLKM) — otomatis dicari sebagai {KODE}.JK di Yahoo Finance. EPS &amp; mean PE 5 tahun isi manual, idealnya diperbarui tiap ada laporan keuangan kuartalan baru.</p>
-      <form @submit.prevent="submitWatch" class="space-y-3">
+      <p class="text-xs text-slate-400 mb-3">Kode pakai kode IDX (mis. BBCA, TLKM) — otomatis dicari sebagai IDX:{KODE} di Google Finance. EPS &amp; mean PE 5 tahun isi manual, idealnya diperbarui tiap ada laporan keuangan kuartalan baru. Kolom ROE, DER, Pertumbuhan EPS, dan Dividend Yield bersifat opsional, tapi makin lengkap makin akurat peringkat "Layak Beli".</p>
         <div class="flex gap-3">
           <div class="flex-1">
             <label class="text-xs text-slate-400 block mb-1">🏷️ Kode Saham (IDX)</label>
@@ -320,6 +319,26 @@
             <input type="number" v-model="wPe" placeholder="18.5" step="0.01" required class="input-field">
           </div>
         </div>
+      <div class="flex gap-3">
+  <div class="flex-1">
+    <label class="text-xs text-slate-400 block mb-1">🏅 ROE (%) <span class="opacity-60">opsional</span></label>
+    <input type="number" v-model="wRoe" placeholder="20" step="0.01" class="input-field">
+  </div>
+  <div class="flex-1">
+    <label class="text-xs text-slate-400 block mb-1">🏦 DER (x) <span class="opacity-60">opsional</span></label>
+    <input type="number" v-model="wDer" placeholder="0.8" step="0.01" min="0" class="input-field">
+  </div>
+</div>
+<div class="flex gap-3">
+  <div class="flex-1">
+    <label class="text-xs text-slate-400 block mb-1">🌱 Pertumbuhan EPS/thn (%) <span class="opacity-60">opsional</span></label>
+    <input type="number" v-model="wGrowth" placeholder="12" step="0.01" class="input-field">
+  </div>
+  <div class="flex-1">
+    <label class="text-xs text-slate-400 block mb-1">💎 Dividend Yield (%) <span class="opacity-60">opsional</span></label>
+    <input type="number" v-model="wDy" placeholder="3" step="0.01" min="0" class="input-field">
+  </div>
+</div>
         <div class="flex gap-2">
           <button type="submit" class="btn-primary flex-1">{{ editingWatchId ? '💾 Simpan perubahan' : '🎯 Tambah ke watchlist' }}</button>
           <button v-if="editingWatchId" type="button" @click="cancelEditWatch" class="btn-secondary flex-1">Batal</button>
@@ -331,7 +350,7 @@
     <div class="glass-card p-4">
       <h2 class="font-display font-bold text-slate-800 mb-1">👁️ Daftar watchlist</h2>
       <p class="text-xs text-slate-400 mb-3">{{ watchlist.length }} saham dipantau &middot; {{ totalBeli }} sinyal 🟢 Beli saat ini.</p>
-      <button @click="refreshPrices" class="btn-secondary w-full mb-3">🔄 Refresh Harga (Yahoo Finance)</button>
+     <button @click="refreshPrices" class="btn-secondary w-full mb-3">🔄 Refresh Harga (Google Finance)</button>
 
       <div v-if="watchlist.length" class="overflow-x-auto scrollbar-thin">
         <table class="w-full text-xs" style="min-width:560px;">
@@ -373,6 +392,30 @@
       <div v-else class="text-center text-slate-500 text-sm py-6">Belum ada saham di watchlist.</div>
     </div>
   </div>
+  <div class="glass-card p-4">
+  <h2 class="font-display font-bold text-slate-800 mb-1">🏅 Peringkat Layak Beli</h2>
+  <p class="text-xs text-slate-400 mb-3">Dari saham berstatus 🟢 Beli, diurutkan dengan skor multi-faktor 0–100: Valuasi/MOS (Graham–Buffett) 40 · Earnings Yield (Greenblatt) 10 · ROE (Buffett) 15 · DER (Graham) 10 · PEG (Lynch) 15 · Dividend Yield 10. Faktor yang datanya kosong dilewati, bobotnya dihitung ulang.</p>
+  <div v-if="rankedBeli.length===0" class="text-center text-slate-500 text-sm py-6">Belum ada saham berstatus Beli.</div>
+  <div v-for="(w,i) in rankedBeli" :key="w.id" class="py-3 border-t border-slate-100 first:border-0">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-lg font-extrabold text-slate-300 w-6">{{ i+1 }}</span>
+        <div>
+          <div class="font-semibold text-sm text-slate-800">{{ w.kode }} <span v-if="w.nama" class="text-[10px] text-slate-500 font-normal">{{ w.nama }}</span></div>
+          <div class="text-[11px] text-slate-400">MOS {{ fmtPct(w.mos) }} · Kelengkapan data {{ w.completeness }}%</div>
+        </div>
+      </div>
+      <div class="text-right">
+        <div class="font-display text-xl font-bold" :class="w.skor>=60 ? 'text-emerald-600' : (w.skor>=45 ? 'text-amber-600' : 'text-rose-600')">{{ w.skor.toFixed(0) }}</div>
+        <span class="pill" :class="w.grade==='A' ? 'pill-gain' : (w.grade==='B' ? 'pill-amber' : 'pill-slate')">{{ w.label }}</span>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-1.5 mt-2">
+      <span v-for="f in w.factors" :key="f.name" class="pill pill-slate" style="font-weight:600;">{{ f.name }} {{ f.score.toFixed(0) }}</span>
+    </div>
+  </div>
+  <p class="text-[11px] text-slate-500 mt-3 leading-relaxed">Catatan: DER kurang relevan untuk bank/lembaga keuangan (kosongkan saja). Skor adalah alat bantu penyaringan, bukan rekomendasi investasi. Selalu cek laporan keuangan dan risiko sendiri.</p>
+</div>
 
   <!-- ================= TAB: PENGATURAN ================= -->
   <div v-else-if="activeTab==='pengaturan'" class="space-y-4">
