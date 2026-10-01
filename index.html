@@ -17,6 +17,7 @@
   .hero-glow{position:absolute;width:220px;height:220px;border-radius:9999px;background:radial-gradient(circle,rgba(255,255,255,.35),transparent 70%);top:-90px;right:-70px;opacity:.6;pointer-events:none}
   .input-field{width:100%;padding:.62rem .8rem;font-size:14px;color:#1E293B;background:rgba(255,255,255,.9);border:1px solid rgba(15,23,42,.14);border-radius:.9rem}
   .input-field:focus{outline:none;border-color:#10B981;background:#fff}
+  .input-field:disabled{background:rgba(15,23,42,.05);color:#64748B}
   .btn-primary{background:linear-gradient(135deg,#34D399,#0D9488);color:#052E27;font-weight:700;font-size:14px;padding:.68rem;border:none;border-radius:.9rem;cursor:pointer;box-shadow:0 10px 24px -8px rgba(16,185,129,.4)}
   .btn-primary:active{transform:scale(.97)}
   .btn-secondary{background:rgba(15,23,42,.04);color:#334155;border:1px solid rgba(15,23,42,.12);font-weight:600;font-size:13px;padding:.62rem;border-radius:.9rem;cursor:pointer}
@@ -32,6 +33,8 @@
   .tab-btn{transition:all .18s ease}
   .scrollbar-thin::-webkit-scrollbar{height:6px}
   .scrollbar-thin::-webkit-scrollbar-thumb{background:rgba(15,23,42,.15);border-radius:9999px}
+  details>summary{cursor:pointer;list-style:none}
+  details>summary::-webkit-details-marker{display:none}
 </style>
 </head>
 <body>
@@ -186,62 +189,155 @@
     </div>
   </div>
 
-  <!-- TAB: WATCHLIST (SCREENER IDX) -->
+  <!-- TAB: WATCHLIST (INPUT MANUAL + FAIR VALUE BERBOBOT) -->
   <div v-else-if="activeTab==='watchlist'" class="space-y-4">
+
     <div class="glass-card p-4">
-      <h2 class="font-bold text-slate-800 mb-1">🔎 Screener Saham IDX</h2>
-      <p class="text-xs text-slate-400 mb-3">{{ screener.length }} saham dipindai · ✅ {{ totalLayak }} lolos kriteria · 🟢 {{ totalBeli }} sinyal beli · 🔔 {{ totalJual }} sinyal jual (yang dimiliki) · 📝 {{ totalPerluData }} perlu data fundamental.</p>
-      <button @click="runScreener" class="btn-secondary w-full mb-3">🔄 Ambil Data Google Finance &amp; Jalankan Screener</button>
-      <div class="flex gap-2 overflow-x-auto scrollbar-thin pb-2 mb-2">
-        <button v-for="f in filters" :key="f.id" @click="filterId=f.id" class="chip" :class="filterId===f.id ? 'chip-on' : ''">{{ f.label }}</button>
+      <h2 class="font-bold text-slate-800 mb-1">👁️ Watchlist &amp; Fair Value</h2>
+      <p class="text-xs text-slate-400 mb-3">{{ analyzed.length }} saham · 🟢 {{ cnt('Beli') }} beli · ✋ {{ cnt('Hold') }} hold · 🚨 {{ cnt('Jual') }} jual · ⏳ {{ cnt('Tunggu') }} tunggu · 🔴 {{ cnt('Mahal') }} mahal.</p>
+      <button @click="refreshPrices" class="btn-secondary w-full">🔄 Update harga dari Google Finance</button>
+      <p class="text-[11px] text-slate-500 mt-2">{{ wlStatus }}</p>
+    </div>
+
+    <!-- PARAMETER -->
+    <details class="glass-card p-4">
+      <summary class="flex items-center justify-between">
+        <span class="font-bold text-slate-800">⚙️ Parameter &amp; bobot metode</span>
+        <span class="text-xs text-slate-400">ketuk untuk buka</span>
+      </summary>
+      <div class="mt-3 space-y-4">
+        <div class="flex gap-3">
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Discount rate / COE (%)</label><input type="number" step="0.1" v-model.number="cfg.coe" class="input-field"></div>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Diskon beli / MOS (%)</label><input type="number" step="1" v-model.number="cfg.mos" class="input-field"></div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="rounded-2xl p-3 border border-slate-200" style="background:rgba(52,211,153,.06);">
+            <p class="text-xs font-bold text-slate-700 mb-2">🏭 Non-financial <span class="font-normal" :class="wSum(cfg.wNon)===100 ? 'text-slate-400' : 'text-amber-600'">(total {{ wSum(cfg.wNon) }}%)</span></p>
+            <div class="grid grid-cols-4 gap-2">
+              <div v-for="m in METHODS" :key="m.k"><label class="text-[10px] text-slate-400 block mb-1">{{ m.label }} %</label><input type="number" min="0" v-model.number="cfg.wNon[m.k]" class="input-field" style="padding:.5rem .4rem;"></div>
+            </div>
+          </div>
+          <div class="rounded-2xl p-3 border border-slate-200" style="background:rgba(251,191,36,.07);">
+            <p class="text-xs font-bold text-slate-700 mb-2">🏦 Financial (bank/asuransi/multifinance) <span class="font-normal" :class="wSum(cfg.wFin)===100 ? 'text-slate-400' : 'text-amber-600'">(total {{ wSum(cfg.wFin) }}%)</span></p>
+            <div class="grid grid-cols-4 gap-2">
+              <div v-for="m in METHODS" :key="m.k"><label class="text-[10px] text-slate-400 block mb-1">{{ m.label }} %</label><input type="number" min="0" v-model.number="cfg.wFin[m.k]" class="input-field" style="padding:.5rem .4rem;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button @click="saveWatch" class="btn-primary flex-1">💾 Simpan parameter</button>
+          <button @click="resetCfg" class="btn-secondary flex-1">↩️ Default</button>
+        </div>
+        <p class="text-[11px] text-slate-500 leading-relaxed">Bobot dinormalisasi otomatis: jika data suatu metode kosong, bobotnya dibagi ke metode lain yang datanya ada, jadi total tidak harus tepat 100%. Bobot 0 = metode tidak dipakai.</p>
       </div>
-      <div v-if="shownList.length" class="overflow-x-auto scrollbar-thin">
-        <table class="w-full text-xs" style="min-width:900px;">
-          <thead><tr class="text-slate-400">
-            <th class="text-left pb-2">#</th><th class="text-left pb-2">Kode</th><th class="text-right pb-2">Harga</th><th class="text-right pb-2">Transaksi/hari</th>
-            <th class="text-right pb-2">ROE</th><th class="text-right pb-2">DER</th><th class="text-right pb-2">PEG</th><th class="text-right pb-2">Yield</th>
-            <th class="text-right pb-2">Harga Wajar</th><th class="text-right pb-2">Beli ≤</th><th class="text-right pb-2">Jual ≥</th>
-            <th class="text-right pb-2">MOS</th><th class="text-right pb-2">Skor</th><th class="text-center pb-2">Strategi</th><th class="text-center pb-2">Sinyal</th>
-          </tr></thead>
-          <tbody>
-            <tr v-for="(w,i) in shownList" :key="w.kode" class="border-t border-slate-100" :style="w.owned ? 'background:rgba(245,158,11,.05)' : ''">
-              <td class="py-2 text-slate-400">{{ i+1 }}</td>
-              <td class="py-2">
-                <div class="font-semibold text-slate-800">{{ w.kode }} <span v-if="w.owned" title="Sudah dimiliki">📦</span></div>
-                <div class="text-[10px] text-slate-500">{{ w.nama || w.grup }}<span v-if="w.nama"> · {{ w.grup }}</span></div>
-                <div v-if="w.owned && w.avgBuy>0 && w.price>0" class="text-[10px]" :class="pctColor(w.price/w.avgBuy-1)">P/L {{ fmtPct(w.price/w.avgBuy-1) }}</div>
-              </td>
-              <td class="py-2 text-right text-slate-600">{{ w.price ? fmtRp(w.price) : '—' }}</td>
-              <td class="py-2 text-right text-slate-600">{{ w.valueIDR ? fmtMiliar(w.valueIDR) : '—' }}</td>
-              <td class="py-2 text-right text-slate-600">{{ w.roeNow ? w.roeNow.toFixed(1)+'%' : '—' }}</td>
-              <td class="py-2 text-right text-slate-600">{{ w.der===null ? '—' : w.der.toFixed(2) }}</td>
-              <td class="py-2 text-right text-slate-600">{{ w.peg ? w.peg.toFixed(2) : '—' }}</td>
-              <td class="py-2 text-right text-slate-600">{{ w.dy ? (w.dy*100).toFixed(1)+'%' : '—' }}</td>
-              <td class="py-2 text-right font-semibold text-slate-800">{{ w.hargaWajar ? fmtRp(w.hargaWajar) : '—' }}<div class="text-[9px] font-normal text-slate-400">{{ w.metode }}</div></td>
-              <td class="py-2 text-right text-emerald-700">{{ w.hargaWajar ? fmtRp(w.buyBelow) : '—' }}</td>
-              <td class="py-2 text-right text-rose-600">{{ w.hargaWajar ? fmtRp(w.sellAbove) : '—' }}</td>
-              <td class="py-2 text-right font-medium" :class="pctColor(w.mos)">{{ w.hargaWajar ? fmtPct(w.mos) : '—' }}</td>
-              <td class="py-2 text-right font-semibold text-slate-700">{{ w.skor }}</td>
-              <td class="py-2 text-center"><span class="pill" :class="w.strategi==='Tidak lolos' ? 'pill-slate' : (w.strategi==='Perlu data fundamental' ? 'pill-amber' : 'pill-gain')">{{ w.strategi }}</span></td>
-              <td class="py-2 text-center"><span class="pill" :class="sig(w).cls">{{ sig(w).label }}</span></td>
-            </tr>
-          </tbody>
-        </table>
-        <p class="text-[11px] text-slate-500 mt-3">🕒 Update terakhir: {{ lastUpdateLabel }}. Google Finance IDX bisa tertunda ±20 menit. Refresh memakan waktu 30–60 detik.</p>
+    </details>
+
+    <!-- FORM INPUT -->
+    <div class="glass-card p-4">
+      <h2 class="font-bold text-slate-800 mb-1">{{ wEditing ? '✏️ Ubah saham ' + wEditing : '➕ Tambah saham' }}</h2>
+      <p class="text-xs text-slate-400 mb-3">Isi data dari laporan keuangan / Stockbit. Metode yang datanya kosong otomatis dilewati.</p>
+      <form @submit.prevent="submitWatch" class="space-y-3">
+        <div class="flex gap-3">
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Kode saham</label><input type="text" v-model="wf.kode" :disabled="!!wEditing" required maxlength="6" placeholder="BBCA" class="input-field uppercase"></div>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Nama (opsional)</label><input type="text" v-model="wf.nama" placeholder="Bank Central Asia" class="input-field"></div>
+        </div>
+        <div class="flex gap-3">
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Sektor</label>
+            <select v-model="wf.tipe" class="input-field"><option value="non">🏭 Non-financial</option><option value="financial">🏦 Financial</option></select></div>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Harga saat ini (Rp)</label><input type="number" step="any" v-model="wf.price" placeholder="otomatis dari Google Finance" class="input-field"></div>
+        </div>
+        <div class="flex gap-3 items-end">
+          <label class="flex items-center gap-2 text-sm text-slate-700 flex-1 pb-2"><input type="checkbox" v-model="wf.owned" class="w-4 h-4"> 📦 Sudah saya miliki</label>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Harga beli rata-rata (Rp)</label><input type="number" step="any" v-model="wf.avgBuy" :disabled="!wf.owned" placeholder="0" class="input-field"></div>
+        </div>
+
+        <p class="text-xs font-bold text-slate-600 pt-1">📘 Data dasar</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div><label class="text-xs text-slate-400 block mb-1">EPS (Rp/saham)</label><input type="number" step="any" v-model="wf.eps" class="input-field"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">BVPS (Rp/saham)</label><input type="number" step="any" v-model="wf.bvps" class="input-field"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">DPS (Rp/saham/thn)</label><input type="number" step="any" v-model="wf.dps" class="input-field"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">ROE (%)</label><input type="number" step="any" v-model="wf.roe" class="input-field"></div>
+        </div>
+
+        <p class="text-xs font-bold text-slate-600 pt-1">🧮 Asumsi per metode</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div><label class="text-xs text-slate-400 block mb-1">PE: target PE (x)</label><input type="number" step="any" v-model="wf.peTarget" placeholder="mean PE 5 th" class="input-field"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">PBV: target PBV (x)</label><input type="number" step="any" v-model="wf.pbvTarget" placeholder="kosong = otomatis" class="input-field"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">DDM: growth dividen (%)</label><input type="number" step="any" v-model="wf.gDiv" class="input-field"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">DCF: FCF/saham (Rp)</label><input type="number" step="any" v-model="wf.fcfps" class="input-field"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">DCF: growth FCF 5 th (%)</label><input type="number" step="any" v-model="wf.gFcf" class="input-field"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">DCF: terminal growth (%)</label><input type="number" step="any" v-model="wf.gTerminal" class="input-field"></div>
+        </div>
+        <div><label class="text-xs text-slate-400 block mb-1">📝 Catatan (opsional)</label><input type="text" v-model="wf.catatan" class="input-field"></div>
+        <div class="flex gap-2">
+          <button type="submit" class="btn-primary flex-1">{{ wEditing ? '💾 Simpan perubahan' : '➕ Tambah ke watchlist' }}</button>
+          <button v-if="wEditing" type="button" @click="cancelEditWatch" class="btn-secondary flex-1">Batal</button>
+        </div>
+      </form>
+      <ul class="text-[11px] text-slate-500 mt-3 space-y-1 leading-relaxed list-disc pl-4">
+        <li><b>DCF</b>: FCF/saham diproyeksi 5 tahun dengan growth FCF, lalu terminal value (Gordon), semuanya didiskon dengan COE. Untuk financial biasanya tidak relevan (bobot default 0%).</li>
+        <li><b>PBV</b>: BVPS × target PBV. Jika target kosong dipakai PBV wajar = (ROE − g) ÷ (COE − g), dibatasi 0,5–4×.</li>
+        <li><b>PE</b>: EPS × target PE (disarankan mean PE 5 tahun). <b>DDM</b>: DPS × (1+g) ÷ (COE − g).</li>
+      </ul>
+    </div>
+
+    <!-- DAFTAR -->
+    <div class="flex gap-2 overflow-x-auto scrollbar-thin pb-1">
+      <button v-for="f in filters" :key="f.id" @click="filterId=f.id" class="chip" :class="filterId===f.id ? 'chip-on' : ''">{{ f.label }}</button>
+    </div>
+
+    <div v-if="shownList.length===0" class="glass-card p-8 text-center text-slate-500 text-sm">{{ analyzed.length ? 'Tidak ada saham pada filter ini.' : 'Watchlist masih kosong. Tambahkan saham lewat form di atas.' }}</div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div v-for="w in shownList" :key="w.kode" class="glass-card p-4">
+        <div class="flex justify-between items-start gap-2">
+          <div>
+            <div class="font-extrabold text-lg text-slate-800">{{ w.kode }} <span v-if="w.owned" title="Dimiliki">📦</span></div>
+            <div class="text-[11px] text-slate-500">{{ w.nama || '—' }} · {{ w.fin ? '🏦 Financial' : '🏭 Non-financial' }}</div>
+          </div>
+          <span class="pill" :class="sigCls(w.sinyal)">{{ sigIco(w.sinyal) }} {{ w.sinyal }}</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 mt-3 text-center">
+          <div class="rounded-xl py-2" style="background:rgba(15,23,42,.04);"><p class="text-[10px] text-slate-400">Harga</p><p class="text-sm font-bold text-slate-800">{{ w.price ? fmtRp(w.price) : '—' }}</p></div>
+          <div class="rounded-xl py-2" style="background:rgba(52,211,153,.10);"><p class="text-[10px] text-slate-400">Fair value</p><p class="text-sm font-bold text-slate-800">{{ w.fair ? fmtRp(w.fair) : '—' }}</p></div>
+          <div class="rounded-xl py-2" style="background:rgba(15,23,42,.04);"><p class="text-[10px] text-slate-400">Margin of safety</p><p class="text-sm font-bold" :class="pctColor(w.fair&&w.price ? w.mos : null)">{{ w.fair&&w.price ? fmtPct(w.mos) : '—' }}</p></div>
+        </div>
+
+        <div class="flex justify-between text-xs mt-3">
+          <span class="text-slate-400">🟢 Zona beli (≤ fair − {{ cfg.mos }}%)</span><span class="font-semibold text-emerald-700">{{ w.fair ? fmtRp(w.buyBelow) : '—' }}</span>
+        </div>
+        <div class="flex justify-between text-xs mt-1">
+          <span class="text-slate-400">🚨 Zona jual (≥ fair value)</span><span class="font-semibold text-rose-600">{{ w.fair ? fmtRp(w.fair) : '—' }}</span>
+        </div>
+        <div v-if="w.owned && w.avgBuy>0 && w.price>0" class="flex justify-between text-xs mt-1">
+          <span class="text-slate-400">📦 P/L vs harga beli ({{ fmtRp(w.avgBuy) }})</span><span class="font-semibold" :class="pctColor(w.price/w.avgBuy-1)">{{ fmtPct(w.price/w.avgBuy-1) }}</span>
+        </div>
+
+        <div class="mt-3 pt-3 border-t border-slate-100">
+          <p class="text-[11px] font-bold text-slate-500 mb-1.5">Rincian metode</p>
+          <div v-for="m in w.methodRows" :key="m.label" class="flex justify-between items-center text-xs py-1">
+            <span class="text-slate-500">{{ m.label }} <span class="text-slate-400">· bobot {{ m.eff ? (m.eff*100).toFixed(0)+'%' : (m.v>0 ? '0%' : '—') }}</span></span>
+            <span class="font-semibold" :class="m.v>0 ? 'text-slate-800' : 'text-slate-400'">{{ m.v>0 ? fmtRp(m.v) : 'data kosong' }}</span>
+          </div>
+        </div>
+        <p v-if="w.catatan" class="text-[11px] text-slate-500 mt-2">📝 {{ w.catatan }}</p>
+        <div class="flex justify-end gap-3 mt-3">
+          <button @click="startEditWatch(w.kode)" class="text-emerald-600 text-[11px] underline">Ubah</button>
+          <button @click="deleteWatch(w.kode)" class="text-rose-600 text-[11px] underline">Hapus</button>
+        </div>
       </div>
-      <div v-else class="text-center text-slate-500 text-sm py-6">{{ screener.length ? 'Tidak ada saham pada filter ini.' : 'Belum ada data. Sambungkan Google Sheets di tab Pengaturan lalu tekan tombol refresh.' }}</div>
     </div>
 
     <div class="glass-card p-4">
-      <h2 class="font-bold text-slate-800 mb-2">📋 Kriteria &amp; metode</h2>
+      <h2 class="font-bold text-slate-800 mb-2">📋 Aturan sinyal</h2>
       <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed">
-        <li><b>Data Google Finance</b>: harga, PE, EPS, High/Low 52w, market cap, volume rata-rata. Transaksi harian = volume rata-rata × harga.</li>
-        <li><b>Data manual</b> (Google Finance tidak punya): isi di sheet <b>Fundamental</b> — BVPS, DPS, ROE sekarang, ROE terendah 5 th, DER, jumlah tahun laba positif, growth EPS, Mean PE 5 th, owned (1/0) &amp; harga beli rata-rata. Saham yang ada di sheet <b>Universe</b> otomatis dibuatkan barisnya; tempel seluruh kode IDX di sana untuk memindai semua emiten.</li>
-        <li><b>💎 Value/Dividen</b>: transaksi ≥ Rp10 M/hari · DER &lt; 1,0 (bank dikecualikan) · ROE ≥ 10% tiap tahun selama 5 th · laba positif ≥ 5 th · yield dividen ≥ 3%.</li>
-        <li><b>🚀 Growth</b>: transaksi &gt; Rp5 M/hari · ROE &gt; 15% · DER ≤ 0,8 (bank dikecualikan) · PEG ≤ 1,0 (PE ÷ growth EPS) · growth EPS ≥ 10% · laba positif ≥ 3 th.</li>
-        <li><b>Harga wajar per sektor</b>: bank = PBV, PE, DDM · defensif = PE, DDM, Graham · siklikal (energi/tambang/dasar) = PBV, Graham, DDM · properti = PBV, PE, Graham · growth = PEG, PE, Graham · umum = PE, Graham, DDM. Diambil rata-rata metode yang datanya ada (COE 13%).</li>
-        <li><b>Sinyal</b>: 🟢 Beli (harga ≤ wajar dikurangi MOS 30%; growth murni 20%) · ✋ Hold (di bawah harga wajar) · 🔔 Jual Sebagian (100–120% wajar, yang dimiliki) · 🚨 Jual (≥120% wajar, yang dimiliki) · 🔴 Mahal (belum punya, ≥ wajar).</li>
-        <li><b>Skor (0–100)</b>: MOS 40 + ROE 20 + Growth 20 + Yield 10 + posisi 52 minggu 10. Urutan tabel: Jual → Jual Sebagian → Beli (skor tertinggi) → Hold.</li>
+        <li><b>Fair value</b> = rata-rata berbobot metode DCF / PBV / PE / DDM. Bobot non-financial dan financial dibedakan (atur di Parameter).</li>
+        <li><b>🟢 Beli</b>: belum dimiliki dan harga ≤ fair value dikurangi diskon {{ cfg.mos }}%.</li>
+        <li><b>✋ Hold</b>: sudah dimiliki dan harga masih di bawah fair value.</li>
+        <li><b>🚨 Jual</b>: sudah dimiliki dan harga ≥ fair value (target tercapai).</li>
+        <li><b>⏳ Tunggu</b>: belum dimiliki, harga di atas zona beli tetapi masih di bawah fair value. <b>🔴 Mahal</b>: belum dimiliki dan harga ≥ fair value.</li>
+        <li>Ini alat bantu hitung, bukan rekomendasi investasi. Hasil sangat bergantung pada asumsi yang Anda isi.</li>
       </ul>
     </div>
   </div>
@@ -250,7 +346,7 @@
   <div v-else-if="activeTab==='pengaturan'" class="space-y-4">
     <div class="glass-card p-4">
       <h2 class="font-bold text-slate-800 mb-1">🗄️ Database (Google Sheets)</h2>
-      <p class="text-xs text-slate-400 mb-3">{{ syncStatus.connected ? 'Data disinkronkan ke Google Sheets lewat Apps Script — semua perangkat yang membuka aplikasi ini dengan URL yang sama akan melihat data yang sama.' : 'Belum tersambung ke Google Sheets. Tempel URL Web App Apps Script Anda di bawah supaya data (Portofolio & Screener) tersimpan terpusat.' }}</p>
+      <p class="text-xs text-slate-400 mb-3">{{ syncStatus.connected ? 'Data disinkronkan ke Google Sheets lewat Apps Script — semua perangkat yang membuka aplikasi ini dengan URL yang sama akan melihat data yang sama.' : 'Belum tersambung ke Google Sheets. Tempel URL Web App Apps Script Anda di bawah supaya data (Portofolio & Watchlist) tersimpan terpusat.' }}</p>
       <form @submit.prevent="connectScript" class="space-y-3">
         <div><label class="text-xs text-slate-400 block mb-1">🔗 URL Web App Apps Script</label><input type="url" v-model="scriptUrlInput" placeholder="https://script.google.com/macros/s/xxx/exec" class="input-field"></div>
         <button type="submit" class="btn-primary w-full">🔗 Sambungkan</button>
@@ -276,8 +372,8 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 
 createApp({
   setup(){
-    const APP_VERSION = '3.0';
-    const APP_BUILD = '2026-09-30';
+    const APP_VERSION = '4.0';
+    const APP_BUILD = '2026-10-01';
 
     const tabs = [
       { id:'ringkasan', emoji:'📊', label:'Ringkasan' },
@@ -288,16 +384,17 @@ createApp({
     const activeTab = ref('ringkasan');
 
     const rows = ref([]);
-    const screener = ref([]);
+    const wl = ref([]);
     const editingId = ref(null);
     const yearFilter = ref('all');
-    const filterId = ref('layak');
+    const filterId = ref('all');
+    const wEditing = ref(null);
+    const wlStatus = ref('');
 
     const fDate = ref(''); const fDana = ref('0'); const fEquity = ref(''); const fDividen = ref('0'); const fIhsg = ref('');
     const scriptUrlInput = ref(localStorage.getItem('apps-script-url') || '');
 
     const fmtRp = n => 'Rp' + Math.round(n).toLocaleString('id-ID');
-    const fmtMiliar = n => 'Rp' + (n/1e9).toLocaleString('id-ID',{maximumFractionDigits:1}) + ' M';
     const fmtPct = n => (n===null||n===undefined||isNaN(n)) ? '—' : (n>=0?'+':'') + (n*100).toFixed(2) + '%';
     const fmtDate = s => new Date(s+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
     const fmtMonth = s => new Date(s+'T00:00:00').toLocaleDateString('id-ID',{month:'long',year:'numeric'});
@@ -315,15 +412,38 @@ createApp({
     const toApiPortfolioRow = r => ({ id:r.id, tanggal:r.date, dana:r.dana, dividen:r.dividen||0, equity:r.equity, ihsg:r.ihsg });
     const fromApiPortfolioRow = r => ({ id:String(r.id), date:String(r.tanggal), dana:Number(r.dana)||0, dividen:Number(r.dividen)||0, equity:Number(r.equity)||0, ihsg:Number(r.ihsg)||0 });
 
-    function fromApiScreenerRow(r){
-      const n = v => Number(v)||0, nn = v => (v===''||v===null||v===undefined||isNaN(Number(v))) ? null : Number(v);
-      return { kode:String(r.kode||'').toUpperCase(), nama:r.nama||'', grup:r.grup||'umum',
-        price:n(r.price), valueIDR:n(r.valueIDR), roeNow:n(r.roeNow), roeMin5:nn(r.roeMin5), der:nn(r.der), labaThn:nn(r.labaThn),
-        growth:n(r.growth), peg:n(r.peg), dy:n(r.dy), pbv:n(r.pbv),
-        lolosValue:String(r.lolosValue)==='1', lolosGrowth:String(r.lolosGrowth)==='1', strategi:r.strategi||'Tidak lolos', metode:r.metode||'',
-        hargaWajar:n(r.hargaWajar), buyBelow:n(r.buyBelow), sellAbove:n(r.sellAbove), mos:n(r.mos), skor:n(r.skor),
-        sinyal:r.sinyal||'', priority:n(r.priority), owned:(r.owned===true||String(r.owned)==='1'), avgBuy:n(r.avgBuy), updatedAt:String(r.updatedAt||'') };
+    // ---------- Watchlist: data & parameter ----------
+    const METHODS = [ {k:'dcf',label:'DCF'}, {k:'pbv',label:'PBV'}, {k:'pe',label:'PE'}, {k:'ddm',label:'DDM'} ];
+    const NUM_FIELDS = ['avgBuy','price','eps','bvps','dps','roe','gDiv','peTarget','pbvTarget','fcfps','gFcf','gTerminal'];
+    const defaultCfg = () => ({ coe:13, mos:30,
+      wNon:{ dcf:40, pbv:15, pe:25, ddm:20 },
+      wFin:{ dcf:0, pbv:40, pe:30, ddm:30 } });
+    const cfg = reactive(defaultCfg());
+    function applyCfg(c){
+      if(!c || typeof c!=='object') return;
+      if(c.coe!==undefined) cfg.coe = Number(c.coe)||13;
+      if(c.mos!==undefined) cfg.mos = Number(c.mos)||30;
+      if(c.wNon) METHODS.forEach(m=>{ if(c.wNon[m.k]!==undefined) cfg.wNon[m.k] = Number(c.wNon[m.k])||0; });
+      if(c.wFin) METHODS.forEach(m=>{ if(c.wFin[m.k]!==undefined) cfg.wFin[m.k] = Number(c.wFin[m.k])||0; });
     }
+    function resetCfg(){ applyCfg(defaultCfg()); saveWatch(); }
+    const wSum = o => METHODS.reduce((a,m)=>a+(Number(o[m.k])||0),0);
+
+    const emptyForm = () => ({ kode:'', nama:'', tipe:'non', owned:false, avgBuy:'', price:'', eps:'', bvps:'', dps:'', roe:'',
+      gDiv:'5', peTarget:'', pbvTarget:'', fcfps:'', gFcf:'8', gTerminal:'4', catatan:'' });
+    const wf = reactive(emptyForm());
+
+    const toApiWatch = w => {
+      const o = { kode:w.kode, nama:w.nama||'', tipe:w.tipe==='financial'?'financial':'non', owned:w.owned?1:0, catatan:w.catatan||'', updatedAt:w.updatedAt||'' };
+      NUM_FIELDS.forEach(f=>{ const v = parseFloat(w[f]); o[f] = isFinite(v) ? v : ''; });
+      return o;
+    };
+    const fromApiWatch = r => {
+      const o = { kode:String(r.kode||'').toUpperCase(), nama:String(r.nama||''), tipe:String(r.tipe)==='financial'?'financial':'non',
+        owned:(r.owned===true||String(r.owned)==='1'||String(r.owned).toLowerCase()==='true'), catatan:String(r.catatan||''), updatedAt:String(r.updatedAt||'') };
+      NUM_FIELDS.forEach(f=>{ o[f] = (r[f]===''||r[f]===null||r[f]===undefined) ? '' : String(r[f]); });
+      return o;
+    };
 
     async function loadData(){
       const url = getScriptUrl();
@@ -333,15 +453,17 @@ createApp({
           const json = await (await fetch(url)).json();
           if(!json.ok) throw new Error(json.error || 'Respons tidak valid');
           rows.value = (json.portfolio||[]).map(fromApiPortfolioRow);
-          screener.value = (json.screener||[]).map(fromApiScreenerRow);
+          wl.value = (json.watchlist||[]).map(fromApiWatch);
+          if(json.config && json.config.params) applyCfg(json.config.params);
           localStorage.setItem('nav-tracker-data-cache', JSON.stringify(rows.value));
-          localStorage.setItem('screener-cache', JSON.stringify(screener.value));
+          localStorage.setItem('watchlist-cache', JSON.stringify(wl.value));
+          localStorage.setItem('watchlist-config', JSON.stringify(cfg));
           syncStatus.state='idle'; syncStatus.message='Tersambung ke Google Sheets.';
         }catch(e){
           console.error('Gagal memuat dari Google Sheets', e);
-          const c = localStorage.getItem('nav-tracker-data-cache'), cs = localStorage.getItem('screener-cache');
+          const c = localStorage.getItem('nav-tracker-data-cache');
           rows.value = c ? JSON.parse(c) : [];
-          screener.value = cs ? JSON.parse(cs) : [];
+          loadWatchLocal();
           syncStatus.state='error'; syncStatus.message='Gagal terhubung ke Google Sheets. Menampilkan data cache terakhir di perangkat ini.';
         }
       } else {
@@ -354,10 +476,14 @@ createApp({
             rows.value = raw ? JSON.parse(raw) : [];
           }
         }catch(e){ rows.value = []; }
-        screener.value = [];
+        loadWatchLocal();
         syncStatus.connected = false; syncStatus.state='idle';
         syncStatus.message = 'Mode lokal — data hanya tersimpan di perangkat/browser ini. Sambungkan ke Google Sheets di tab Pengaturan supaya terpusat.';
       }
+    }
+    function loadWatchLocal(){
+      try{ const c = localStorage.getItem('watchlist-cache'); wl.value = c ? JSON.parse(c) : []; }catch(e){ wl.value = []; }
+      try{ const c = localStorage.getItem('watchlist-config'); if(c) applyCfg(JSON.parse(c)); }catch(e){}
     }
 
     async function postJson(payload){
@@ -385,32 +511,144 @@ createApp({
       }
     }
 
-    // ---------- Screener ----------
-    const SIG_CLS = {'Beli':'pill-gain','Hold':'pill-slate','Jual Sebagian':'pill-amber','Jual':'pill-loss','Mahal':'pill-loss','Data kurang':'pill-slate','Di luar kriteria':'pill-slate'};
-    const SIG_ICO = {'Beli':'🟢','Hold':'✋','Jual Sebagian':'🔔','Jual':'🚨','Mahal':'🔴','Data kurang':'❔','Di luar kriteria':'➖'};
-    function sig(w){ const k = w.sinyal || 'Data kurang'; return {label:(SIG_ICO[k]||'')+' '+k, cls:SIG_CLS[k]||'pill-slate'}; }
+    async function saveWatch(){
+      localStorage.setItem('watchlist-cache', JSON.stringify(wl.value));
+      localStorage.setItem('watchlist-config', JSON.stringify(cfg));
+      if(getScriptUrl()){
+        wlStatus.value = 'Menyimpan watchlist ke Google Sheets…';
+        try{
+          const json = await postJson({action:'saveWatchlist', rows: wl.value.map(toApiWatch), config:{ params: JSON.parse(JSON.stringify(cfg)) }});
+          if(!json.ok) throw new Error(json.error || 'Gagal menyimpan');
+          wl.value = (json.watchlist||[]).map(fromApiWatch);
+          localStorage.setItem('watchlist-cache', JSON.stringify(wl.value));
+          wlStatus.value = 'Watchlist tersimpan ke Google Sheets.';
+        }catch(e){
+          console.error(e);
+          wlStatus.value = 'Gagal menyimpan ke Google Sheets (pastikan Apps Script sudah di-deploy ulang dengan New version). Data tersimpan sementara di perangkat ini.';
+        }
+      } else {
+        wlStatus.value = 'Mode lokal — watchlist tersimpan di browser ini.';
+      }
+    }
 
-    async function runScreener(){
+    async function refreshPrices(){
       if(!getScriptUrl()){
         syncStatus.connected = false; syncStatus.state='error';
-        syncStatus.message = 'Screener butuh koneksi ke Google Sheets (Apps Script) — sambungkan dulu di tab Pengaturan.';
+        syncStatus.message = 'Update harga butuh koneksi ke Google Sheets (Apps Script) — sambungkan dulu di tab Pengaturan.';
         activeTab.value = 'pengaturan';
         return;
       }
-      syncStatus.connected = true; syncStatus.state='saving'; syncStatus.message='Mengambil data Google Finance & menjalankan screener… bisa 30–60 detik.';
+      if(!wl.value.length){ wlStatus.value = 'Watchlist masih kosong.'; return; }
+      wlStatus.value = 'Mengambil harga dari Google Finance… bisa 15–60 detik.';
       try{
-        const json = await postJson({action:'runScreener'});
-        if(!json.ok) throw new Error(json.error || 'Gagal menjalankan screener');
-        screener.value = (json.screener||[]).map(fromApiScreenerRow);
-        localStorage.setItem('screener-cache', JSON.stringify(screener.value));
-        syncStatus.state='idle'; syncStatus.message='Screener selesai diperbarui dari Google Finance.';
+        const json = await postJson({action:'refreshPrices', kodes: wl.value.map(w=>w.kode)});
+        if(!json.ok) throw new Error(json.error || 'Gagal mengambil harga');
+        let ok = 0; const now = new Date().toISOString();
+        wl.value.forEach(w=>{ const p = json.prices[w.kode]; if(p>0){ w.price = String(p); w.updatedAt = now; ok++; } });
+        await saveWatch();
+        wlStatus.value = 'Harga diperbarui untuk ' + ok + ' dari ' + wl.value.length + ' saham. (Google Finance IDX bisa tertunda ±20 menit.)';
       }catch(e){
-        console.error(e); syncStatus.state='error';
-        syncStatus.message='Gagal menjalankan screener. Pastikan Apps Script sudah di-deploy ulang (New version) dan Anda sudah memberi izin akses.';
+        console.error(e); wlStatus.value = 'Gagal mengambil harga. Pastikan Apps Script sudah di-deploy ulang (New version) dan izin akses sudah diberikan.';
       }
     }
 
     async function connectScript(){ setScriptUrl(scriptUrlInput.value.trim()); await loadData(); }
+
+    // ---------- mesin fair value ----------
+    const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+    const num = v => { const x = parseFloat(v); return isFinite(x) ? x : 0; };
+
+    function analyzeWatch(w){
+      const fin = w.tipe==='financial';
+      const coe = clamp(num(cfg.coe)/100, 0.05, 0.5);
+      const gCap = coe - 0.03;
+      const eps = num(w.eps), bvps = num(w.bvps), dps = num(w.dps), roe = num(w.roe), price = num(w.price);
+      const gDiv = clamp(num(w.gDiv)/100, 0, gCap);
+      const peT = num(w.peTarget), pbvT = num(w.pbvTarget);
+
+      // PE
+      const PE = (eps>0 && peT>0) ? eps*peT : 0;
+      // PBV
+      let PBV = 0;
+      if(bvps>0){
+        if(pbvT>0) PBV = bvps*pbvT;
+        else if(roe>0) PBV = bvps*clamp((roe/100 - gDiv)/(coe - gDiv), 0.5, 4);
+      }
+      // DDM
+      const DDM = dps>0 ? dps*(1+gDiv)/(coe-gDiv) : 0;
+      // DCF (FCF per saham, 5 tahun + terminal value)
+      let DCF = 0;
+      const fcf = num(w.fcfps);
+      if(fcf>0){
+        const g1 = clamp(num(w.gFcf)/100, -0.2, 0.4);
+        const gt = clamp(num(w.gTerminal)/100, 0, gCap);
+        let f = fcf, pv = 0;
+        for(let t=1; t<=5; t++){ f *= (1+g1); pv += f/Math.pow(1+coe, t); }
+        pv += (f*(1+gt)/(coe-gt)) / Math.pow(1+coe, 5);
+        DCF = pv;
+      }
+
+      const vals = { dcf:DCF, pbv:PBV, pe:PE, ddm:DDM };
+      const W = fin ? cfg.wFin : cfg.wNon;
+      let tw = 0;
+      METHODS.forEach(m=>{ if(vals[m.k]>0) tw += Math.max(0, num(W[m.k])); });
+      let fair = 0;
+      if(tw>0) METHODS.forEach(m=>{ if(vals[m.k]>0) fair += vals[m.k]*Math.max(0,num(W[m.k]))/tw; });
+      const methodRows = METHODS.map(m=>({ label:m.label, v:vals[m.k], eff:(vals[m.k]>0 && tw>0) ? Math.max(0,num(W[m.k]))/tw : 0 }));
+
+      const mosPct = clamp(num(cfg.mos), 0, 90)/100;
+      const buyBelow = fair*(1-mosPct);
+      const mos = (fair>0 && price>0) ? (fair-price)/fair : 0;
+      const owned = !!w.owned;
+
+      let sinyal;
+      if(fair<=0 || price<=0) sinyal = 'Data kurang';
+      else if(owned) sinyal = price>=fair ? 'Jual' : 'Hold';
+      else if(price<=buyBelow) sinyal = 'Beli';
+      else if(price>=fair) sinyal = 'Mahal';
+      else sinyal = 'Tunggu';
+
+      return { ...w, fin, owned, price, avgBuy:num(w.avgBuy), fair, buyBelow, mos, sinyal, methodRows };
+    }
+
+    const SIG_CLS = {'Beli':'pill-gain','Hold':'pill-slate','Jual':'pill-loss','Tunggu':'pill-amber','Mahal':'pill-loss','Data kurang':'pill-slate'};
+    const SIG_ICO = {'Beli':'🟢','Hold':'✋','Jual':'🚨','Tunggu':'⏳','Mahal':'🔴','Data kurang':'❔'};
+    const sigCls = s => SIG_CLS[s] || 'pill-slate';
+    const sigIco = s => SIG_ICO[s] || '';
+    const SIG_ORDER = {'Jual':0,'Beli':1,'Hold':2,'Tunggu':3,'Mahal':4,'Data kurang':5};
+
+    const analyzed = computed(()=> wl.value.map(analyzeWatch));
+    const cnt = s => analyzed.value.filter(w=>w.sinyal===s).length;
+    const filters = [
+      {id:'all', label:'Semua'}, {id:'Beli', label:'🟢 Beli'}, {id:'owned', label:'📦 Dimiliki'}, {id:'Jual', label:'🚨 Jual'},
+      {id:'Tunggu', label:'⏳ Tunggu'}, {id:'fin', label:'🏦 Financial'}, {id:'non', label:'🏭 Non-financial'}
+    ];
+    const shownList = computed(()=>{
+      const f = filterId.value;
+      const pass = w => f==='all' ? true : f==='owned' ? w.owned : f==='fin' ? w.fin : f==='non' ? !w.fin : w.sinyal===f;
+      return analyzed.value.filter(pass).sort((a,b)=> (SIG_ORDER[a.sinyal]-SIG_ORDER[b.sinyal]) || (b.mos-a.mos));
+    });
+
+    function submitWatch(){
+      const kode = String(wf.kode||'').toUpperCase().trim();
+      if(!kode) return;
+      const item = { ...JSON.parse(JSON.stringify(wf)), kode, updatedAt:new Date().toISOString() };
+      if(!item.owned) item.avgBuy = '';
+      const idx = wl.value.findIndex(w=>w.kode===kode);
+      if(idx>=0) wl.value[idx] = { ...wl.value[idx], ...item }; else wl.value.push(item);
+      wEditing.value = null; Object.assign(wf, emptyForm());
+      saveWatch();
+    }
+    function startEditWatch(kode){
+      const w = wl.value.find(x=>x.kode===kode); if(!w) return;
+      wEditing.value = kode; Object.assign(wf, emptyForm(), JSON.parse(JSON.stringify(w)));
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
+    function cancelEditWatch(){ wEditing.value = null; Object.assign(wf, emptyForm()); }
+    function deleteWatch(kode){
+      if(!confirm('Hapus ' + kode + ' dari watchlist?')) return;
+      wl.value = wl.value.filter(w=>w.kode!==kode); saveWatch();
+    }
 
     // ---------- mesin perhitungan NAB ----------
     function compute(){
@@ -528,29 +766,6 @@ createApp({
     const monthlyPerf = computed(()=> [...activeComputed.value.slice(1)].reverse());
     const editingEntry = computed(()=> editingId.value ? rows.value.find(r=>r.id===editingId.value) : null);
 
-    const isLayak = w => w.lolosValue || w.lolosGrowth;
-    const filters = [
-      {id:'layak', label:'✅ Lolos kriteria'}, {id:'value', label:'💎 Value/Dividen'}, {id:'growth', label:'🚀 Growth'},
-      {id:'beli', label:'🟢 Sinyal beli'}, {id:'jual', label:'🔔 Sinyal jual'}, {id:'owned', label:'📦 Dimiliki'},
-      {id:'data', label:'📝 Perlu data'}, {id:'all', label:'Semua'}
-    ];
-    const shownList = computed(()=>{
-      const f = filterId.value;
-      const pass = {
-        layak: isLayak, value: w=>w.lolosValue, growth: w=>w.lolosGrowth, beli: w=>w.sinyal==='Beli',
-        jual: w=>w.owned && (w.sinyal==='Jual'||w.sinyal==='Jual Sebagian'), owned: w=>w.owned,
-        data: w=>w.strategi==='Perlu data fundamental', all: ()=>true }[f];
-      return screener.value.filter(pass).sort((a,b)=>b.priority-a.priority);
-    });
-    const totalLayak = computed(()=> screener.value.filter(isLayak).length);
-    const totalBeli = computed(()=> screener.value.filter(w=>w.sinyal==='Beli').length);
-    const totalJual = computed(()=> screener.value.filter(w=>w.owned && (w.sinyal==='Jual'||w.sinyal==='Jual Sebagian')).length);
-    const totalPerluData = computed(()=> screener.value.filter(w=>w.strategi==='Perlu data fundamental').length);
-    const lastUpdateLabel = computed(()=>{
-      const u = screener.value.find(w=>w.updatedAt);
-      return u ? fmtDate(u.updatedAt.slice(0,10)) : 'belum pernah';
-    });
-
     function syncEntryForm(){
       const e = editingEntry.value;
       fDate.value = e ? e.date : ''; fDana.value = e ? String(e.dana) : '0';
@@ -578,14 +793,15 @@ createApp({
     onMounted(()=>{ loadData(); });
 
     return {
-      APP_VERSION, APP_BUILD, tabs, activeTab, rows, screener, editingId, yearFilter, filterId, filters,
+      APP_VERSION, APP_BUILD, tabs, activeTab, rows, editingId, yearFilter, filterId, filters,
       fDate, fDana, fEquity, fDividen, fIhsg, scriptUrlInput,
-      fmtRp, fmtMiliar, fmtPct, fmtDate, fmtMonth, pctColor, cagrColor, sig,
-      syncStatus, connectScript, runScreener,
+      fmtRp, fmtPct, fmtDate, fmtMonth, pctColor, cagrColor,
+      syncStatus, connectScript,
       computedRows, reversedComputedRows, lastRow, totalReturn, cagr, totalDividenAllTime,
       years, activeComputed, yearStats, prevYearStats, chartSvg, monthlyPerf, editingEntry,
-      shownList, totalLayak, totalBeli, totalJual, totalPerluData, lastUpdateLabel,
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
+      METHODS, cfg, wf, wEditing, wlStatus, analyzed, shownList, cnt, sigCls, sigIco, wSum,
+      submitWatch, startEditWatch, cancelEditWatch, deleteWatch, saveWatch, resetCfg, refreshPrices,
       parseInt, Math
     };
   }
