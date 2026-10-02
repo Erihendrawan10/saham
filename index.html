@@ -263,7 +263,7 @@
           
           <div class="section-header">Identitas Saham</div>
           <div class="grid gap-3" style="grid-template-columns:1fr 1fr">
-            <div><label class="text-xs text-slate-400 block mb-1">Kode (misal: BBCA)</label><input type="text" v-model="wf.kode" :disabled="!!wEditing" required maxlength="6" placeholder="BBCA" class="input-field uppercase"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Kode IDX (format: IDX:BBCA)</label><input type="text" v-model="wf.kode" :disabled="!!wEditing" required maxlength="10" placeholder="IDX:BBCA" class="input-field uppercase"><p class="field-hint">Format: IDX:KODE (contoh: IDX:BBCA, IDX:UNVR, IDX:ASII)</p></div>
             <div><label class="text-xs text-slate-400 block mb-1">Nama Perusahaan</label><input type="text" v-model="wf.nama" placeholder="Bank Central Asia" class="input-field"></div>
           </div>
 
@@ -583,17 +583,19 @@ createApp({
         return;
       }
       if(!wl.value.length){ wlStatus.value = 'Watchlist masih kosong.'; return; }
-      wlStatus.value = 'Mengambil harga dari Yahoo Finance… tunggu sebentar.';
+      wlStatus.value = 'Mengambil harga dari Google Finance… tunggu 10-30 detik.';
       try{
         const json = await postJson({action:'refreshPrices', kodes: wl.value.map(w=>w.kode)});
         if(!json.ok) throw new Error(json.error || 'Gagal mengambil harga');
         let ok = 0; const now = new Date().toISOString();
         
+        console.log('🔍 Prices fetched:', json.prices);
+        
         // UPDATE HARGA - dengan proper Vue reactivity
         wl.value.forEach((w, idx)=>{ 
           const p = json.prices[w.kode]; 
-          if(p>0){ 
-            // Trigger Vue reactivity dengan Object.assign (penting!)
+          console.log(`🔍 ${w.kode}: ${p}`);
+          if(p && isFinite(p) && p>0){ 
             wl.value[idx] = { ...w, price: String(p), updatedAt: now };
             ok++; 
           } 
@@ -601,9 +603,10 @@ createApp({
         
         // SIMPAN ke Google Sheets
         await saveWatch();
-        wlStatus.value = 'Harga diperbarui untuk ' + ok + ' saham (Yahoo Finance delay ~15 menit). ✅ Tersimpan ke Google Sheets.';
+        wlStatus.value = 'Harga diperbarui untuk ' + ok + ' dari ' + wl.value.length + ' saham. ✅ Tersimpan ke Google Sheets.';
       }catch(e){
-        console.error(e); wlStatus.value = 'Gagal update harga — pastikan Apps Script sudah di-deploy ulang dengan New version.';
+        console.error('❌ Error:', e); 
+        wlStatus.value = 'Gagal update harga — pastikan Apps Script sudah di-deploy ulang dengan New version.';
       }
     }
 
@@ -678,8 +681,14 @@ createApp({
     const shownList = computed(()=> analyzed.value.sort((a,b)=> (SIG_ORDER[a.sinyal]-SIG_ORDER[b.sinyal]) || (b.mos-a.mos)));
 
     function submitWatch(){
-      const kode = String(wf.kode||'').toUpperCase().trim();
+      let kode = String(wf.kode||'').toUpperCase().trim();
       if(!kode) return;
+      
+      // Normalize format: IDX:BBCA atau BBCA → IDX:BBCA
+      if(!kode.startsWith('IDX:')) {
+        kode = 'IDX:' + kode;
+      }
+      
       const item = { ...JSON.parse(JSON.stringify(wf)), kode, updatedAt:new Date().toISOString() };
       if(!item.owned) item.avgBuy = '';
       const idx = wl.value.findIndex(w=>w.kode===kode);
