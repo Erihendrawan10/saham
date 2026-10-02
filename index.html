@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tracking Kinerja Saham - Dynamic Watchlist</title>
+<title>Tracking Kinerja Saham - Dynamic Watchlist v5</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
 <style>
@@ -15,34 +15,51 @@
   .glass-card{background:rgba(255,255,255,.85);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border:1px solid rgba(15,23,42,.07);border-radius:1.5rem;box-shadow:0 20px 45px -25px rgba(15,23,42,.18)}
   .hero-card{position:relative;overflow:hidden;border-radius:1.75rem;padding:22px 20px;background:linear-gradient(135deg,#10B981,#0D9488 55%,#065F5B);box-shadow:0 25px 60px -18px rgba(16,185,129,.35)}
   .hero-glow{position:absolute;width:220px;height:220px;border-radius:9999px;background:radial-gradient(circle,rgba(255,255,255,.35),transparent 70%);top:-90px;right:-70px;opacity:.6;pointer-events:none}
-  .input-field{width:100%;padding:.62rem .8rem;font-size:14px;color:#1E293B;background:rgba(255,255,255,.9);border:1px solid rgba(15,23,42,.14);border-radius:.9rem}
-  .input-field:focus{outline:none;border-color:#10B981;background:#fff}
+  .input-field{width:100%;padding:.62rem .8rem;font-size:14px;color:#1E293B;background:rgba(255,255,255,.9);border:1px solid rgba(15,23,42,.14);border-radius:.9rem;transition:all .2s}
+  .input-field:focus{outline:none;border-color:#10B981;background:#fff;box-shadow:0 0 0 3px rgba(16,185,129,.1)}
   .input-field:disabled{background:rgba(15,23,42,.05);color:#64748B}
-  .btn-primary{background:linear-gradient(135deg,#34D399,#0D9488);color:#052E27;font-weight:700;font-size:14px;padding:.68rem;border:none;border-radius:.9rem;cursor:pointer;box-shadow:0 10px 24px -8px rgba(16,185,129,.4)}
+  .btn-primary{background:linear-gradient(135deg,#34D399,#0D9488);color:#052E27;font-weight:700;font-size:14px;padding:.68rem;border:none;border-radius:.9rem;cursor:pointer;box-shadow:0 10px 24px -8px rgba(16,185,129,.4);transition:all .2s}
   .btn-primary:active{transform:scale(.97)}
-  .btn-secondary{background:rgba(15,23,42,.04);color:#334155;border:1px solid rgba(15,23,42,.12);font-weight:600;font-size:13px;padding:.62rem;border-radius:.9rem;cursor:pointer}
+  .btn-primary:hover{box-shadow:0 15px 35px -10px rgba(16,185,129,.5)}
+  .btn-secondary{background:rgba(15,23,42,.04);color:#334155;border:1px solid rgba(15,23,42,.12);font-weight:600;font-size:13px;padding:.62rem;border-radius:.9rem;cursor:pointer;transition:all .2s}
   .btn-secondary:hover{background:rgba(15,23,42,.08)}
+  .btn-sm{font-size:11px;padding:.4rem .6rem}
   .pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
   .pill-gain{background:rgba(16,185,129,.12);color:#0D9488}
   .pill-loss{background:rgba(244,63,94,.12);color:#E11D48}
   .pill-amber{background:rgba(245,158,11,.14);color:#B45309}
   .pill-slate{background:rgba(100,116,139,.12);color:#475569}
-  .chip{font-size:12px;font-weight:600;padding:5px 12px;border-radius:9999px;border:1px solid rgba(15,23,42,.12);background:rgba(15,23,42,.03);color:#475569;cursor:pointer;white-space:nowrap}
+  .chip{font-size:12px;font-weight:600;padding:5px 12px;border-radius:9999px;border:1px solid rgba(15,23,42,.12);background:rgba(15,23,42,.03);color:#475569;cursor:pointer;white-space:nowrap;transition:all .2s}
   .chip-on{background:linear-gradient(135deg,#34D399,#0D9488);color:#052E27;border-color:transparent}
   .dot{width:8px;height:8px;border-radius:9999px;display:inline-block}
   .tab-btn{transition:all .18s ease}
   .scrollbar-thin::-webkit-scrollbar{height:6px}
   .scrollbar-thin::-webkit-scrollbar-thumb{background:rgba(15,23,42,.15);border-radius:9999px}
-  details>summary{cursor:pointer;list-style:none}
+  details>summary{cursor:pointer;list-style:none;user-select:none}
   details>summary::-webkit-details-marker{display:none}
-  .method-section{padding:1.25rem;margin-top:0.75rem;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.15);border-radius:1rem}
-  .method-label{font-size:12px;font-weight:700;color:#0D9488;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+  details[open]>summary{margin-bottom:1rem}
+  .method-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:.75rem}
+  .method-input{padding:.5rem .6rem;font-size:12px}
+  .section-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748B;margin-top:1.25rem;margin-bottom:.75rem;padding-top:.75rem;border-top:1px solid rgba(15,23,42,.08)}
   .field-hint{font-size:10px;color:#94A3B8;margin-top:.25rem;font-style:italic}
-  .section-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748B;margin-top:1.5rem;margin-bottom:.8rem;padding-top:.8rem;border-top:1px solid rgba(15,23,42,.08)}
+  .status-badge{font-size:11px;font-weight:700;padding:.35rem .6rem;border-radius:.6rem;text-align:center;min-width:60px}
+  .status-beli{background:rgba(16,185,129,.15);color:#0D9488}
+  .status-hold{background:rgba(100,116,139,.15);color:#475569}
+  .status-jual{background:rgba(244,63,94,.15);color:#E11D48}
+  .status-tunggu{background:rgba(245,158,11,.15);color:#B45309}
+  .status-mahal{background:rgba(244,63,94,.15);color:#E11D48}
+  .watch-table{width:100%;border-collapse:collapse;font-size:13px}
+  .watch-table th{background:rgba(15,23,42,.04);padding:.75rem;text-align:left;font-weight:700;color:#64748B;border-bottom:1px solid rgba(15,23,42,.12)}
+  .watch-table td{padding:.75rem;border-bottom:1px solid rgba(15,23,42,.08)}
+  .watch-table tr:last-child td{border-bottom:none}
+  .watch-table tr:hover{background:rgba(52,211,153,.05)}
+  .watch-table .code{font-weight:700;color:#1E293B}
+  .watch-table .num{text-align:right;font-variant-numeric:tabular-nums}
+  .divider-h{height:1px;background:linear-gradient(90deg,transparent,rgba(15,23,42,.1),transparent);margin:1.5rem 0}
 </style>
 </head>
 <body>
-<div id="app" v-cloak class="max-w-lg lg:max-w-5xl mx-auto px-4 md:px-8 pt-7 pb-28 lg:pb-12">
+<div id="app" v-cloak class="max-w-6xl mx-auto px-4 md:px-8 pt-7 pb-28 lg:pb-12">
 
   <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between text-center lg:text-left mb-6 gap-4">
     <h1 class="font-extrabold text-2xl tracking-tight bg-clip-text text-transparent" style="background-image:linear-gradient(135deg,#059669,#0D9488,#10B981);-webkit-background-clip:text;">📈 Tracking Kinerja Saham</h1>
@@ -92,7 +109,7 @@
 
       <div v-if="yearStats" class="glass-card p-4">
         <h2 class="font-bold text-slate-800 mb-1">⚔️ Performa {{ yearFilter }}</h2>
-        <p class="text-xs text-slate-400 mb-3">Dibandingkan dengan tahun {{ parseInt(yearFilter)-1 }}{{ prevYearStats ? '' : ' (tidak ada data)' }}.</p>
+        <p class="text-xs text-slate-400 mb-3">Dibandingkan dengan tahun {{ parseInt(yearFilter)-1 }}.</p>
         <div class="grid grid-cols-2 rounded-2xl overflow-hidden border border-slate-200">
           <div class="p-3" style="background:rgba(52,211,153,.08);">
             <p class="text-[11px] text-slate-600 font-bold mb-2">{{ yearFilter }}</p>
@@ -116,7 +133,7 @@
 
       <div class="glass-card p-4">
         <h2 class="font-bold text-slate-800 mb-1">📈 NAB vs IHSG (rebased ke 1000)</h2>
-        <p class="text-xs text-slate-400 mb-3">Membandingkan kinerja murni investasi Anda terhadap IHSG, tidak terpengaruh besar/kecilnya setoran.</p>
+        <p class="text-xs text-slate-400 mb-3">Membandingkan kinerja murni investasi Anda terhadap IHSG.</p>
         <div v-if="activeComputed.length>=2">
           <div v-html="chartSvg"></div>
           <div class="flex gap-4 mt-2 text-[11px] text-slate-400">
@@ -125,15 +142,6 @@
           </div>
         </div>
         <div v-else class="text-center text-slate-500 text-sm py-6">Tambahkan minimal 2 entri untuk melihat grafik.</div>
-      </div>
-
-      <div class="glass-card p-4">
-        <h2 class="font-bold text-slate-800 mb-3">🏆 Kinerja bulanan vs IHSG</h2>
-        <div v-if="monthlyPerf.length===0" class="text-center text-slate-500 text-sm py-4">Belum ada data bulanan.</div>
-        <div v-for="r in monthlyPerf" :key="r.id" class="flex justify-between items-center py-2.5 border-b border-slate-100 last:border-0">
-          <div><div class="font-semibold text-sm text-slate-800">{{ fmtMonth(r.date) }}</div><div class="text-[11px] text-slate-400">NAB {{ fmtPct(r.nabPct) }} &middot; IHSG {{ fmtPct(r.ihsgPct) }}</div></div>
-          <span class="pill" :class="(r.nabPct-r.ihsgPct)>=0 ? 'pill-gain' : 'pill-loss'">{{ (r.nabPct-r.ihsgPct)>=0 ? '🏆 Unggul' : '🔻 Kalah' }} {{ fmtPct(Math.abs(r.nabPct-r.ihsgPct)).replace('+','') }}</span>
-        </div>
       </div>
     </template>
   </div>
@@ -158,7 +166,6 @@
           <button v-if="editingId" type="button" @click="cancelEditEntry" class="btn-secondary flex-1">Batal</button>
         </div>
       </form>
-      <p class="text-[11px] text-slate-500 mt-3 leading-relaxed">Dana negatif berarti penarikan dana. Isi minus di depan angka, misal -50000. Dividen cukup untuk dicatat/dipantau — jika kas dividen masih mengendap di akun, nilainya otomatis sudah ikut terhitung di kolom Equity, jadi tidak perlu dimasukkan lagi ke kolom Dana. Kalau dividen ditarik keluar dari akun, catat penarikannya di kolom Dana (minus). Data tersimpan otomatis setiap kali ditambah/diubah.</p>
     </div>
 
     <div class="glass-card p-4">
@@ -193,327 +200,203 @@
     </div>
   </div>
 
-  <!-- TAB: WATCHLIST - DENGAN DYNAMIC FIELDS -->
+  <!-- TAB: WATCHLIST v5 - RESTRUCTURED -->
   <div v-else-if="activeTab==='watchlist'" class="space-y-4">
 
+    <!-- BAGIAN 1: SYNC STATUS & UPDATE HARGA -->
     <div class="glass-card p-4">
-      <h2 class="font-bold text-slate-800 mb-1">👁️ Watchlist &amp; Fair Value</h2>
-      <p class="text-xs text-slate-400 mb-3">{{ analyzed.length }} saham · 🟢 {{ cnt('Beli') }} beli · ✋ {{ cnt('Hold') }} hold · 🚨 {{ cnt('Jual') }} jual · ⏳ {{ cnt('Tunggu') }} tunggu · 🔴 {{ cnt('Mahal') }} mahal.</p>
-      <button @click="refreshPrices" class="btn-secondary w-full">🔄 Update harga dari Google Finance</button>
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="font-bold text-slate-800">👁️ Watchlist Saham</h2>
+          <p class="text-xs text-slate-400 mt-1">{{ analyzed.length }} saham · 🟢 {{ cnt('Beli') }} · ✋ {{ cnt('Hold') }} · 🚨 {{ cnt('Jual') }} · ⏳ {{ cnt('Tunggu') }} · 🔴 {{ cnt('Mahal') }}</p>
+        </div>
+        <button @click="refreshPrices" class="btn-primary btn-sm">🔄 Update harga</button>
+      </div>
       <p class="text-[11px] text-slate-500 mt-2">{{ wlStatus }}</p>
     </div>
 
-    <!-- PARAMETER -->
-    <details class="glass-card p-4">
-      <summary class="flex items-center justify-between">
-        <span class="font-bold text-slate-800">⚙️ Parameter &amp; bobot metode</span>
-        <span class="text-xs text-slate-400">ketuk untuk buka</span>
+    <!-- BAGIAN 2: PARAMETER & BOBOT (PALING ATAS) -->
+    <details open class="glass-card">
+      <summary class="p-4 font-bold text-slate-800 flex items-center justify-between cursor-pointer">
+        <span>⚙️ Parameter & Bobot Metode</span>
+        <span class="text-xs text-slate-400">{{ details_param_open ? '▼' : '▶' }}</span>
       </summary>
-      <div class="mt-3 space-y-4">
+      <div class="px-4 pb-4 space-y-4">
         <div class="flex gap-3">
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Discount rate / COE (%)</label><input type="number" step="0.1" v-model.number="cfg.coe" class="input-field"></div>
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Diskon beli / MOS (%)</label><input type="number" step="1" v-model.number="cfg.mos" class="input-field"></div>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Discount Rate / COE (%)</label><input type="number" step="0.1" v-model.number="cfg.coe" class="input-field"></div>
+          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Diskon Beli / MOS (%)</label><input type="number" step="1" v-model.number="cfg.mos" class="input-field"></div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <div class="rounded-2xl p-3 border border-slate-200" style="background:rgba(52,211,153,.06);">
-            <p class="text-xs font-bold text-slate-700 mb-2">🏭 Non-financial <span class="font-normal" :class="wSum(cfg.wNon)===100 ? 'text-slate-400' : 'text-amber-600'">(total {{ wSum(cfg.wNon) }}%)</span></p>
-            <div class="grid grid-cols-4 gap-2">
-              <div v-for="m in METHODS" :key="m.k"><label class="text-[10px] text-slate-400 block mb-1">{{ m.label }} %</label><input type="number" min="0" v-model.number="cfg.wNon[m.k]" class="input-field" style="padding:.5rem .4rem;"></div>
+            <p class="text-xs font-bold text-slate-700 mb-2">🏭 Non-financial <span class="font-normal text-slate-400">(DCF 30%, PBV 20%, PE 35%, DDM 15%)</span></p>
+            <div class="method-grid">
+              <div v-for="m in METHODS" :key="m.k"><label class="text-[10px] text-slate-400 block mb-1">{{ m.label }}</label><input type="number" min="0" v-model.number="cfg.wNon[m.k]" class="input-field method-input"></div>
             </div>
+            <p class="text-[10px] text-slate-500 mt-2">Total: {{ wSum(cfg.wNon) }}%</p>
           </div>
           <div class="rounded-2xl p-3 border border-slate-200" style="background:rgba(251,191,36,.07);">
-            <p class="text-xs font-bold text-slate-700 mb-2">🏦 Financial (bank/asuransi/multifinance) <span class="font-normal" :class="wSum(cfg.wFin)===100 ? 'text-slate-400' : 'text-amber-600'">(total {{ wSum(cfg.wFin) }}%)</span></p>
-            <div class="grid grid-cols-4 gap-2">
-              <div v-for="m in METHODS" :key="m.k"><label class="text-[10px] text-slate-400 block mb-1">{{ m.label }} %</label><input type="number" min="0" v-model.number="cfg.wFin[m.k]" class="input-field" style="padding:.5rem .4rem;"></div>
+            <p class="text-xs font-bold text-slate-700 mb-2">🏦 Financial (PE 35%, PBV 45%, DDM 20%)</p>
+            <div class="method-grid">
+              <div v-for="m in METHODS" :key="m.k"><label class="text-[10px] text-slate-400 block mb-1">{{ m.label }}</label><input type="number" min="0" v-model.number="cfg.wFin[m.k]" class="input-field method-input"></div>
             </div>
+            <p class="text-[10px] text-slate-500 mt-2">Total: {{ wSum(cfg.wFin) }}%</p>
           </div>
         </div>
+
         <div class="flex gap-2">
-          <button @click="saveWatch" class="btn-primary flex-1">💾 Simpan parameter</button>
-          <button @click="resetCfg" class="btn-secondary flex-1">↩️ Default</button>
+          <button @click="saveWatch" class="btn-primary flex-1 btn-sm">💾 Simpan parameter</button>
+          <button @click="resetCfg" class="btn-secondary flex-1 btn-sm">↩️ Default</button>
         </div>
-        <p class="text-[11px] text-slate-500 leading-relaxed">Bobot dinormalisasi otomatis: jika data suatu metode kosong, bobotnya dibagi ke metode lain yang datanya ada, jadi total tidak harus tepat 100%. Bobot 0 = metode tidak dipakai.</p>
+        <p class="text-[11px] text-slate-500 leading-relaxed">Bobot dinormalisasi otomatis jika ada data kosong. Sesuaikan dengan preferensi valuasi Anda — default sudah adjusted untuk pasar Indonesia saat ini.</p>
       </div>
     </details>
 
-    <!-- FORM INPUT - DENGAN DYNAMIC FIELDS PER SEKTOR -->
-    <div class="glass-card p-4">
-      <h2 class="font-bold text-slate-800 mb-1">{{ wEditing ? '✏️ Ubah saham ' + wEditing : '➕ Tambah saham' }}</h2>
-      <p class="text-xs text-slate-400 mb-3">Field valuasi akan muncul sesuai sektor yang dipilih. Non-financial menampilkan semua, financial fokus ke PE/PBV/DDM.</p>
-      
-      <form @submit.prevent="submitWatch" class="space-y-3">
-        
-        <!-- IDENTITAS SAHAM -->
-        <div>
-          <div class="section-header">🆔 Identitas Saham</div>
+    <!-- BAGIAN 3: FORM TAMBAH/UBAH SAHAM (COLLAPSIBLE) -->
+    <details class="glass-card">
+      <summary class="p-4 font-bold text-slate-800 flex items-center justify-between cursor-pointer">
+        <span>{{ wEditing ? '✏️ Ubah: ' + wEditing : '➕ Tambah Saham Baru' }}</span>
+        <span class="text-xs text-slate-400">{{ details_form_open ? '▼' : '▶' }}</span>
+      </summary>
+      <div class="px-4 pb-4 space-y-3">
+        <form @submit.prevent="submitWatch" class="space-y-3">
+          
+          <div class="section-header">Identitas Saham</div>
           <div class="grid gap-3" style="grid-template-columns:1fr 1fr">
-            <div><label class="text-xs text-slate-400 block mb-1">Kode saham</label><input type="text" v-model="wf.kode" :disabled="!!wEditing" required maxlength="6" placeholder="BBCA" class="input-field uppercase"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Nama (opsional)</label><input type="text" v-model="wf.nama" placeholder="Bank Central Asia" class="input-field"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Kode (misal: BBCA)</label><input type="text" v-model="wf.kode" :disabled="!!wEditing" required maxlength="6" placeholder="BBCA" class="input-field uppercase"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Nama Perusahaan</label><input type="text" v-model="wf.nama" placeholder="Bank Central Asia" class="input-field"></div>
           </div>
-        </div>
 
-        <!-- SEKTOR & HARGA -->
-        <div>
-          <div class="section-header">⚙️ Sektor & Harga</div>
-          <div class="grid gap-3" style="grid-template-columns:1fr 1fr">
+          <div class="section-header">Sektor & Harga</div>
+          <div class="grid gap-3" style="grid-template-columns:1fr 1fr 1fr">
             <div>
               <label class="text-xs text-slate-400 block mb-1">Sektor</label>
               <select v-model="wf.tipe" class="input-field">
-                <option value="non">{{ sectorDesc.non }}</option>
-                <option value="financial">{{ sectorDesc.financial }}</option>
+                <option value="non">🏭 Non-financial</option>
+                <option value="financial">🏦 Financial</option>
               </select>
-              <p class="field-hint">{{ sectorDesc[wf.tipe] }}</p>
             </div>
             <div>
-              <label class="text-xs text-slate-400 block mb-1">Harga saat ini (Rp)</label>
-              <input type="number" step="any" v-model="wf.price" placeholder="otomatis dari Google Finance" class="input-field">
-            </div>
-          </div>
-        </div>
-
-        <!-- STATUS KEPEMILIKAN -->
-        <div class="flex gap-4">
-          <label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" v-model="wf.owned" class="w-4 h-4"> 📦 Sudah saya miliki</label>
-          <div v-if="wf.owned" class="flex-1">
-            <label class="text-xs text-slate-400 block mb-1">Harga beli rata-rata (Rp)</label>
-            <input type="number" step="any" v-model="wf.avgBuy" placeholder="0" class="input-field">
-          </div>
-        </div>
-
-        <!-- DATA FUNDAMENTAL -->
-        <div>
-          <div class="section-header">📊 Data Fundamental (dari laporan keuangan)</div>
-          <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit, minmax(140px, 1fr))">
-            <div>
-              <label class="text-xs text-slate-400 block mb-1">EPS (Rp/saham)</label>
-              <input type="number" step="any" v-model="wf.eps" class="input-field">
-              <p class="field-hint">Earning per share</p>
+              <label class="text-xs text-slate-400 block mb-1">Harga Saat Ini (Rp)</label>
+              <input type="number" step="any" v-model="wf.price" placeholder="otomatis dari Yahoo Finance" class="input-field">
             </div>
             <div>
-              <label class="text-xs text-slate-400 block mb-1">BVPS (Rp/saham)</label>
-              <input type="number" step="any" v-model="wf.bvps" class="input-field">
-              <p class="field-hint">Book value per share</p>
-            </div>
-            <div>
-              <label class="text-xs text-slate-400 block mb-1">DPS (Rp/saham/thn)</label>
-              <input type="number" step="any" v-model="wf.dps" class="input-field">
-              <p class="field-hint">Dividend per share</p>
-            </div>
-            <div>
-              <label class="text-xs text-slate-400 block mb-1">ROE (%)</label>
-              <input type="number" step="any" v-model="wf.roe" class="input-field">
-              <p class="field-hint">Return on equity</p>
+              <label class="text-xs text-slate-400 block mb-1">Dimiliki?</label>
+              <label class="flex items-center gap-2 mt-2"><input type="checkbox" v-model="wf.owned" class="w-4 h-4"> Ya, saya punya</label>
             </div>
           </div>
-        </div>
 
-        <!-- DYNAMIC: PE METHOD (ALWAYS) -->
-        <div v-if="activeMetrics.pe">
-          <div class="method-section">
-            <div class="method-label">
-              <span class="text-emerald-600">✓</span>
-              <span>Price-to-Earnings (PE)</span>
-              <span v-if="wf.tipe==='financial'" class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded ml-auto">metode utama</span>
-              <span v-else class="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded ml-auto">metode pendukung</span>
-            </div>
-            <div class="grid gap-3" style="grid-template-columns:1fr 1fr">
-              <div>
-                <label class="text-xs text-slate-400 block mb-1">Target PE (x)</label>
-                <input type="number" step="any" v-model="wf.peTarget" placeholder="cth: 15-20x" class="input-field">
-                <p class="field-hint">Rata-rata PE 5 tahun atau PE peer group</p>
-              </div>
-              <div>
-                <label class="text-xs text-slate-400 block mb-1">Formula</label>
-                <div class="bg-slate-100 px-3 py-2 rounded text-xs text-slate-600 font-mono">Fair Value = EPS × PE</div>
-              </div>
+          <div v-if="wf.owned" class="flex gap-3">
+            <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Harga Beli Rata-rata (Rp)</label><input type="number" step="any" v-model="wf.avgBuy" placeholder="0" class="input-field"></div>
+          </div>
+
+          <div class="section-header">Data Fundamental</div>
+          <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
+            <div><label class="text-xs text-slate-400 block mb-1">EPS (Rp/share)</label><input type="number" step="any" v-model="wf.eps" class="input-field"><p class="field-hint">Earning per share</p></div>
+            <div><label class="text-xs text-slate-400 block mb-1">BVPS (Rp/share)</label><input type="number" step="any" v-model="wf.bvps" class="input-field"><p class="field-hint">Book value</p></div>
+            <div><label class="text-xs text-slate-400 block mb-1">DPS (Rp/share/th)</label><input type="number" step="any" v-model="wf.dps" class="input-field"><p class="field-hint">Dividen/share</p></div>
+            <div><label class="text-xs text-slate-400 block mb-1">ROE (%)</label><input type="number" step="any" v-model="wf.roe" class="input-field"><p class="field-hint">Return on equity</p></div>
+          </div>
+
+          <div class="section-header">Metode Valuasi</div>
+          
+          <!-- PE Method -->
+          <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
+            <div class="flex items-center gap-2 mb-2"><span class="text-emerald-600 font-bold">PE</span><span class="text-xs text-slate-500">Price-to-Earnings</span></div>
+            <div class="grid gap-2" style="grid-template-columns:1fr 1fr"><div><label class="text-xs text-slate-400">Target PE (x)</label><input type="number" step="any" v-model="wf.peTarget" placeholder="15-20" class="input-field"></div><div><label class="text-xs text-slate-400">Formula: EPS × PE</label></div></div>
+          </div>
+
+          <!-- PBV Method -->
+          <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
+            <div class="flex items-center gap-2 mb-2"><span class="text-emerald-600 font-bold">PBV</span><span class="text-xs text-slate-500">Price-to-Book Value</span></div>
+            <div class="grid gap-2" style="grid-template-columns:1fr 1fr"><div><label class="text-xs text-slate-400">Target PBV (x)</label><input type="number" step="any" v-model="wf.pbvTarget" placeholder="kosong = auto" class="input-field"></div><div><label class="text-xs text-slate-400">Formula: BVPS × PBV</label></div></div>
+          </div>
+
+          <!-- DDM Method -->
+          <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
+            <div class="flex items-center gap-2 mb-2"><span class="text-emerald-600 font-bold">DDM</span><span class="text-xs text-slate-500">Dividend Discount Model</span></div>
+            <div class="grid gap-2" style="grid-template-columns:1fr 1fr"><div><label class="text-xs text-slate-400">Growth Dividen (%/th)</label><input type="number" step="any" v-model="wf.gDiv" placeholder="3-8" class="input-field"></div><div><label class="text-xs text-slate-400">Formula: DPS×(1+g)/(COE-g)</label></div></div>
+          </div>
+
+          <!-- DCF Method (ONLY NON-FINANCIAL) -->
+          <div v-if="wf.tipe==='non'" class="bg-orange-50 rounded-lg p-3 border border-orange-200">
+            <div class="flex items-center gap-2 mb-2"><span class="text-orange-600 font-bold">DCF</span><span class="text-xs text-slate-500">Discounted Cash Flow (🏭 non-financial saja)</span></div>
+            <div class="grid gap-2" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
+              <div><label class="text-xs text-slate-400">FCF/share (Rp)</label><input type="number" step="any" v-model="wf.fcfps" class="input-field"></div>
+              <div><label class="text-xs text-slate-400">Growth 5 th (%)</label><input type="number" step="any" v-model="wf.gFcf" placeholder="8-15" class="input-field"></div>
+              <div><label class="text-xs text-slate-400">Terminal growth (%)</label><input type="number" step="any" v-model="wf.gTerminal" placeholder="3" class="input-field"></div>
             </div>
           </div>
-        </div>
 
-        <!-- DYNAMIC: PBV METHOD (ALWAYS) -->
-        <div v-if="activeMetrics.pbv">
-          <div class="method-section">
-            <div class="method-label">
-              <span class="text-emerald-600">✓</span>
-              <span>Price-to-Book Value (PBV)</span>
-              <span v-if="wf.tipe==='financial'" class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded ml-auto">metode utama</span>
-              <span v-else class="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded ml-auto">metode pendukung</span>
-            </div>
-            <div class="grid gap-3" style="grid-template-columns:1fr 1fr">
-              <div>
-                <label class="text-xs text-slate-400 block mb-1">Target PBV (x) — opsional</label>
-                <input type="number" step="any" v-model="wf.pbvTarget" placeholder="kosong = otomatis dari ROE" class="input-field">
-                <p class="field-hint">Kosongkan untuk auto-calculate: (ROE − g) ÷ (COE − g), dibatasi 0.5–4x</p>
-              </div>
-              <div>
-                <label class="text-xs text-slate-400 block mb-1">Formula</label>
-                <div class="bg-slate-100 px-3 py-2 rounded text-xs text-slate-600 font-mono">Fair Value = BVPS × PBV</div>
-              </div>
-            </div>
+          <div><label class="text-xs text-slate-400 block mb-1">Catatan</label><input type="text" v-model="wf.catatan" placeholder="Hold sampai ex-div date, atau tunggu Q2 2026" class="input-field"></div>
+
+          <div class="flex gap-2 pt-2">
+            <button type="submit" class="btn-primary flex-1 btn-sm">{{ wEditing ? '💾 Simpan' : '➕ Tambah' }}</button>
+            <button v-if="wEditing" type="button" @click="cancelEditWatch" class="btn-secondary flex-1 btn-sm">Batal</button>
           </div>
-        </div>
-
-        <!-- DYNAMIC: DDM METHOD (ALWAYS) -->
-        <div v-if="activeMetrics.ddm">
-          <div class="method-section">
-            <div class="method-label">
-              <span class="text-emerald-600">✓</span>
-              <span>Dividend Discount Model (DDM)</span>
-              <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded ml-auto">dividen stabil</span>
-            </div>
-            <div class="grid gap-3" style="grid-template-columns:1fr 1fr">
-              <div>
-                <label class="text-xs text-slate-400 block mb-1">Growth dividen (%/tahun)</label>
-                <input type="number" step="any" v-model="wf.gDiv" placeholder="3-8%" class="input-field">
-                <p class="field-hint">Pertumbuhan dividen per tahun (jangan > COE)</p>
-              </div>
-              <div>
-                <label class="text-xs text-slate-400 block mb-1">Formula</label>
-                <div class="bg-slate-100 px-3 py-2 rounded text-xs text-slate-600 font-mono">Fair = DPS×(1+g)÷(COE−g)</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- DYNAMIC: DCF METHOD (ONLY NON-FINANCIAL) -->
-        <div v-if="activeMetrics.dcf">
-          <div class="method-section" style="background:rgba(245,158,11,.05);border-color:rgba(245,158,11,.2)">
-            <div class="method-label">
-              <span class="text-orange-600">✓</span>
-              <span>Discounted Cash Flow (DCF)</span>
-              <span class="text-[10px] bg-orange-100 text-orange-700 px-2 py-1 rounded ml-auto">🏭 non-fin: utama</span>
-            </div>
-            <div class="bg-blue-50 border border-blue-200 rounded p-2 mb-3">
-              <p class="text-xs text-blue-800"><strong>ℹ️ DCF:</strong> Proyeksi FCF 5 tahun + terminal value (Gordon), diskon dengan COE</p>
-            </div>
-            <div class="grid gap-3" style="grid-template-columns:1fr 1fr 1fr">
-              <div>
-                <label class="text-xs text-slate-400 block mb-1">FCF per saham (Rp)</label>
-                <input type="number" step="any" v-model="wf.fcfps" placeholder="dari laporan" class="input-field">
-                <p class="field-hint">Free cash flow ÷ saham beredar</p>
-              </div>
-              <div>
-                <label class="text-xs text-slate-400 block mb-1">Growth FCF 5th (%/thn)</label>
-                <input type="number" step="any" v-model="wf.gFcf" placeholder="5-15%" class="input-field">
-                <p class="field-hint">Pertumbuhan FCF tahun 1–5</p>
-              </div>
-              <div>
-                <label class="text-xs text-slate-400 block mb-1">Terminal growth (%/thn)</label>
-                <input type="number" step="any" v-model="wf.gTerminal" placeholder="2-4%" class="input-field">
-                <p class="field-hint">Growth selamanya setelah tahun 5</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- WARNING: DCF TIDAK UNTUK FINANCIAL -->
-        <div v-if="!activeMetrics.dcf" class="bg-slate-50 rounded-lg p-3 border border-slate-200">
-          <p class="text-xs text-slate-600">
-            <strong>ℹ️ DCF tidak dipakai untuk Financial:</strong> Bank & asuransi gunakan PE & PBV. DCF butuh proyeksi FCF detail yang kompleks dan kurang relevan untuk sektor ini.
-          </p>
-        </div>
-
-        <!-- CATATAN -->
-        <div>
-          <div class="section-header">📝 Catatan</div>
-          <input type="text" v-model="wf.catatan" placeholder="cth: hold sampai Q2 2026, atau tunggu ex-dividend date" class="input-field">
-        </div>
-
-        <!-- TOMBOL SUBMIT -->
-        <div class="flex gap-2 pt-2">
-          <button type="submit" class="btn-primary flex-1">{{ wEditing ? '💾 Simpan perubahan' : '➕ Tambah ke watchlist' }}</button>
-          <button v-if="wEditing" type="button" @click="cancelEditWatch" class="btn-secondary flex-1">Batal</button>
-        </div>
-      </form>
-
-      <!-- LEGENDA METODE -->
-      <div class="mt-6 pt-6 border-t border-slate-200">
-        <p class="text-xs font-bold text-slate-600 mb-3">📖 Penjelasan singkat metode:</p>
-        <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc pl-4">
-          <li><b>PE</b>: EPS × target PE. Paling sederhana, cocok semua sektor.</li>
-          <li><b>PBV</b>: BVPS × target PBV. Berguna untuk financial & asset-heavy. Bisa auto-calculate dari ROE.</li>
-          <li><b>DDM</b>: DPS × (1+g) ÷ (COE−g). Untuk stock dividen tinggi & stabil.</li>
-          <li><b>DCF</b>: Proyeksi FCF 5 tahun + terminal value, diskon dengan COE. Paling detail, cocok untuk non-financial.</li>
-        </ul>
+        </form>
       </div>
+    </details>
+
+    <!-- BAGIAN 4: DAFTAR SAHAM DALAM TABEL -->
+    <div v-if="analyzed.length" class="glass-card p-4 overflow-x-auto scrollbar-thin">
+      <table class="watch-table">
+        <thead>
+          <tr>
+            <th style="min-width:80px">Kode</th>
+            <th style="min-width:150px">Nama</th>
+            <th style="min-width:70px">Sektor</th>
+            <th class="num" style="min-width:90px">Harga Saat Ini</th>
+            <th class="num" style="min-width:90px">Harga Beli</th>
+            <th class="num" style="min-width:70px">Fair Value</th>
+            <th class="num" style="min-width:70px">MOS</th>
+            <th style="min-width:80px">Status</th>
+            <th style="min-width:80px">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="w in shownList" :key="w.kode">
+            <td class="code">{{ w.kode }}{{ w.owned ? ' 📦' : '' }}</td>
+            <td class="text-slate-600" style="font-size:12px">{{ w.nama || '—' }}</td>
+            <td class="text-slate-500" style="font-size:11px">{{ w.fin ? '🏦' : '🏭' }}</td>
+            <td class="num text-slate-700 font-semibold">{{ w.price ? fmtRp(w.price) : '—' }}</td>
+            <td class="num text-slate-600">{{ w.owned && w.avgBuy > 0 ? fmtRp(w.avgBuy) : '—' }}</td>
+            <td class="num text-emerald-700 font-semibold">{{ w.fair ? fmtRp(w.fair) : '—' }}</td>
+            <td class="num" :class="pctColor(w.fair && w.price ? w.mos : null)"><span class="font-semibold">{{ w.fair && w.price ? fmtPct(w.mos) : '—' }}</span></td>
+            <td><span class="status-badge" :class="'status-' + w.sinyal.toLowerCase().replace(' ','')">{{ w.sinyal }}</span></td>
+            <td class="text-center"><button @click="startEditWatch(w.kode)" class="text-emerald-600 text-[11px] underline mr-2">Ubah</button><button @click="deleteWatch(w.kode)" class="text-rose-600 text-[11px] underline">Hapus</button></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-
-    <!-- DAFTAR SAHAM -->
-    <div class="flex gap-2 overflow-x-auto scrollbar-thin pb-1">
-      <button v-for="f in filters" :key="f.id" @click="filterId=f.id" class="chip" :class="filterId===f.id ? 'chip-on' : ''">{{ f.label }}</button>
-    </div>
-
-    <div v-if="shownList.length===0" class="glass-card p-8 text-center text-slate-500 text-sm">{{ analyzed.length ? 'Tidak ada saham pada filter ini.' : 'Watchlist masih kosong. Tambahkan saham lewat form di atas.' }}</div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div v-for="w in shownList" :key="w.kode" class="glass-card p-4">
-        <div class="flex justify-between items-start gap-2">
-          <div>
-            <div class="font-extrabold text-lg text-slate-800">{{ w.kode }} <span v-if="w.owned" title="Dimiliki">📦</span></div>
-            <div class="text-[11px] text-slate-500">{{ w.nama || '—' }} · {{ w.fin ? '🏦 Financial' : '🏭 Non-financial' }}</div>
-          </div>
-          <span class="pill" :class="sigCls(w.sinyal)">{{ sigIco(w.sinyal) }} {{ w.sinyal }}</span>
-        </div>
-
-        <div class="grid grid-cols-3 gap-2 mt-3 text-center">
-          <div class="rounded-xl py-2" style="background:rgba(15,23,42,.04);"><p class="text-[10px] text-slate-400">Harga</p><p class="text-sm font-bold text-slate-800">{{ w.price ? fmtRp(w.price) : '—' }}</p></div>
-          <div class="rounded-xl py-2" style="background:rgba(52,211,153,.10);"><p class="text-[10px] text-slate-400">Fair value</p><p class="text-sm font-bold text-slate-800">{{ w.fair ? fmtRp(w.fair) : '—' }}</p></div>
-          <div class="rounded-xl py-2" style="background:rgba(15,23,42,.04);"><p class="text-[10px] text-slate-400">Margin of safety</p><p class="text-sm font-bold" :class="pctColor(w.fair&&w.price ? w.mos : null)">{{ w.fair&&w.price ? fmtPct(w.mos) : '—' }}</p></div>
-        </div>
-
-        <div class="flex justify-between text-xs mt-3">
-          <span class="text-slate-400">🟢 Zona beli (≤ fair − {{ cfg.mos }}%)</span><span class="font-semibold text-emerald-700">{{ w.fair ? fmtRp(w.buyBelow) : '—' }}</span>
-        </div>
-        <div class="flex justify-between text-xs mt-1">
-          <span class="text-slate-400">🚨 Zona jual (≥ fair value)</span><span class="font-semibold text-rose-600">{{ w.fair ? fmtRp(w.fair) : '—' }}</span>
-        </div>
-        <div v-if="w.owned && w.avgBuy>0 && w.price>0" class="flex justify-between text-xs mt-1">
-          <span class="text-slate-400">📦 P/L vs harga beli ({{ fmtRp(w.avgBuy) }})</span><span class="font-semibold" :class="pctColor(w.price/w.avgBuy-1)">{{ fmtPct(w.price/w.avgBuy-1) }}</span>
-        </div>
-
-        <div class="mt-3 pt-3 border-t border-slate-100">
-          <p class="text-[11px] font-bold text-slate-500 mb-1.5">Rincian metode</p>
-          <div v-for="m in w.methodRows" :key="m.label" class="flex justify-between items-center text-xs py-1">
-            <span class="text-slate-500">{{ m.label }} <span class="text-slate-400">· bobot {{ m.eff ? (m.eff*100).toFixed(0)+'%' : (m.v>0 ? '0%' : '—') }}</span></span>
-            <span class="font-semibold" :class="m.v>0 ? 'text-slate-800' : 'text-slate-400'">{{ m.v>0 ? fmtRp(m.v) : 'data kosong' }}</span>
-          </div>
-        </div>
-        <p v-if="w.catatan" class="text-[11px] text-slate-500 mt-2">📝 {{ w.catatan }}</p>
-        <div class="flex justify-end gap-3 mt-3">
-          <button @click="startEditWatch(w.kode)" class="text-emerald-600 text-[11px] underline">Ubah</button>
-          <button @click="deleteWatch(w.kode)" class="text-rose-600 text-[11px] underline">Hapus</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="glass-card p-4">
-      <h2 class="font-bold text-slate-800 mb-2">📋 Aturan sinyal</h2>
-      <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed">
-        <li><b>Fair value</b> = rata-rata berbobot metode DCF / PBV / PE / DDM. Bobot non-financial dan financial dibedakan (atur di Parameter).</li>
-        <li><b>🟢 Beli</b>: belum dimiliki dan harga ≤ fair value dikurangi diskon {{ cfg.mos }}%.</li>
-        <li><b>✋ Hold</b>: sudah dimiliki dan harga masih di bawah fair value.</li>
-        <li><b>🚨 Jual</b>: sudah dimiliki dan harga ≥ fair value (target tercapai).</li>
-        <li><b>⏳ Tunggu</b>: belum dimiliki, harga di atas zona beli tetapi masih di bawah fair value. <b>🔴 Mahal</b>: belum dimiliki dan harga ≥ fair value.</li>
-        <li>Ini alat bantu hitung, bukan rekomendasi investasi. Hasil sangat bergantung pada asumsi yang Anda isi.</li>
-      </ul>
-    </div>
+    <div v-else class="glass-card p-8 text-center text-slate-500">Watchlist kosong. Tambahkan saham di atas.</div>
   </div>
 
   <!-- TAB: PENGATURAN -->
   <div v-else-if="activeTab==='pengaturan'" class="space-y-4">
     <div class="glass-card p-4">
       <h2 class="font-bold text-slate-800 mb-1">🗄️ Database (Google Sheets)</h2>
-      <p class="text-xs text-slate-400 mb-3">{{ syncStatus.connected ? 'Data disinkronkan ke Google Sheets lewat Apps Script — semua perangkat yang membuka aplikasi ini dengan URL yang sama akan melihat data yang sama.' : 'Belum tersambung ke Google Sheets. Tempel URL Web App Apps Script Anda di bawah supaya data (Portofolio & Watchlist) tersimpan terpusat.' }}</p>
+      <p class="text-xs text-slate-400 mb-3">{{ syncStatus.connected ? 'Data disinkronkan ke Google Sheets — akses dari berbagai perangkat.' : 'Sambungkan ke Google Sheets untuk sinkronisasi data multi-device.' }}</p>
       <form @submit.prevent="connectScript" class="space-y-3">
         <div><label class="text-xs text-slate-400 block mb-1">🔗 URL Web App Apps Script</label><input type="url" v-model="scriptUrlInput" placeholder="https://script.google.com/macros/s/xxx/exec" class="input-field"></div>
         <button type="submit" class="btn-primary w-full">🔗 Sambungkan</button>
       </form>
       <p class="text-xs mt-3" :class="syncStatus.state==='error' ? 'text-rose-600' : (syncStatus.connected ? 'text-emerald-600' : 'text-slate-500')">{{ syncStatus.message }}</p>
     </div>
+
+    <div class="glass-card p-4">
+      <h2 class="font-bold text-slate-800 mb-3">📋 Catatan Penting</h2>
+      <div class="text-xs text-slate-600 space-y-2 leading-relaxed">
+        <p><strong>Update Metode Valuasi:</strong> Sesuaikan parameter valuasi setiap 3-6 bulan berdasarkan kondisi pasar Indonesia (PER rata-rata, interest rate, economic growth).</p>
+        <p><strong>Sumber Data:</strong> Harga dari Yahoo Finance (delay ~15 menit). Fundamental (EPS, DPS, ROE) dari laporan keuangan terbaru perusahaan.</p>
+        <p><strong>Default Parameters (Oct 2026):</strong> COE 13% (sesuai risk-free rate ~7% + risk premium 6%), MOS 30%, Bobot sudah disesuaikan untuk pasar Indonesia.</p>
+      </div>
+    </div>
   </div>
 
-  <div class="text-center text-[11px] text-slate-500 mt-8 opacity-70">🚀 Tracking Saham {{ APP_VERSION }} · build {{ APP_BUILD }}</div>
+  <div class="text-center text-[11px] text-slate-500 mt-8 opacity-70">🚀 Tracking Saham v5.0 · Yahoo Finance · Dynamic Watchlist</div>
 
+  <!-- MOBILE TAB BAR -->
   <div class="lg:hidden fixed bottom-0 inset-x-0 z-50 px-4 pb-4">
     <div class="max-w-lg mx-auto flex gap-1 p-1.5 rounded-2xl glass-card">
       <button v-for="t in tabs" :key="t.id" @click="activeTab=t.id" class="tab-btn flex-1 flex flex-col items-center gap-0.5 py-2 rounded-xl text-[11px] font-semibold"
@@ -529,9 +412,6 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 
 createApp({
   setup(){
-    const APP_VERSION = '4.1';
-    const APP_BUILD = '2026-10-02-DYNAMIC';
-
     const tabs = [
       { id:'ringkasan', emoji:'📊', label:'Ringkasan' },
       { id:'data', emoji:'💼', label:'Portofolio' },
@@ -539,12 +419,13 @@ createApp({
       { id:'pengaturan', emoji:'⚙️', label:'Pengaturan' },
     ];
     const activeTab = ref('ringkasan');
+    const details_param_open = ref(true);
+    const details_form_open = ref(false);
 
     const rows = ref([]);
     const wl = ref([]);
     const editingId = ref(null);
     const yearFilter = ref('all');
-    const filterId = ref('all');
     const wEditing = ref(null);
     const wlStatus = ref('');
 
@@ -560,38 +441,18 @@ createApp({
 
     const hasClaudeStorage = (typeof window.storage !== 'undefined');
 
-    // SEKTOR DESCRIPTION
-    const sectorDesc = {
-      'non': '🏭 Manufaktur, Consumer, Tech, Retail, E-commerce, Real Estate, Infrastruktur',
-      'financial': '🏦 Bank, Asuransi, Multifinance, Fintech, Sekuritas'
-    };
-
-    // COMPUTED: Active Metrics per Sektor
-    const activeMetrics = computed(() => {
-      const fin = wf.tipe === 'financial';
-      return {
-        pe: true,        // PE selalu aktif
-        pbv: true,       // PBV selalu aktif
-        ddm: true,       // DDM selalu aktif
-        dcf: !fin        // DCF HANYA untuk non-financial
-      };
-    });
-
-    // ---------- Google Sheets (Apps Script) ----------
-    const DEFAULT_SCRIPT_URL = '';
-    const getScriptUrl = () => (DEFAULT_SCRIPT_URL || '').trim() || (localStorage.getItem('apps-script-url') || '').trim();
-    const setScriptUrl = url => localStorage.setItem('apps-script-url', url.trim());
-    const syncStatus = reactive({ connected: !!getScriptUrl(), state:'idle', message:'' });
-
-    const toApiPortfolioRow = r => ({ id:r.id, tanggal:r.date, dana:r.dana, dividen:r.dividen||0, equity:r.equity, ihsg:r.ihsg });
-    const fromApiPortfolioRow = r => ({ id:String(r.id), date:String(r.tanggal), dana:Number(r.dana)||0, dividen:Number(r.dividen)||0, equity:Number(r.equity)||0, ihsg:Number(r.ihsg)||0 });
-
-    // ---------- Watchlist: data & parameter ----------
+    // ========== WATCHLIST CONFIG & METHODS ==========
     const METHODS = [ {k:'dcf',label:'DCF'}, {k:'pbv',label:'PBV'}, {k:'pe',label:'PE'}, {k:'ddm',label:'DDM'} ];
     const NUM_FIELDS = ['avgBuy','price','eps','bvps','dps','roe','gDiv','peTarget','pbvTarget','fcfps','gFcf','gTerminal'];
-    const defaultCfg = () => ({ coe:13, mos:30,
-      wNon:{ dcf:40, pbv:15, pe:25, ddm:20 },
-      wFin:{ dcf:0, pbv:40, pe:30, ddm:30 } });
+    
+    // DEFAULT CONFIG: Disesuaikan untuk pasar Indonesia Oct 2026
+    const defaultCfg = () => ({ 
+      coe: 13,  // Sesuai risk-free ~7% + risk premium 6%
+      mos: 30,  // Margin of Safety 30%
+      wNon: { dcf: 30, pbv: 20, pe: 35, ddm: 15 },   // Non-financial: DCF utama
+      wFin: { dcf: 0, pbv: 45, pe: 35, ddm: 20 }     // Financial: PBV & PE utama
+    });
+    
     const cfg = reactive(defaultCfg());
     function applyCfg(c){
       if(!c || typeof c!=='object') return;
@@ -604,7 +465,7 @@ createApp({
     const wSum = o => METHODS.reduce((a,m)=>a+(Number(o[m.k])||0),0);
 
     const emptyForm = () => ({ kode:'', nama:'', tipe:'non', owned:false, avgBuy:'', price:'', eps:'', bvps:'', dps:'', roe:'',
-      gDiv:'5', peTarget:'', pbvTarget:'', fcfps:'', gFcf:'8', gTerminal:'4', catatan:'' });
+      gDiv:'5', peTarget:'', pbvTarget:'', fcfps:'', gFcf:'8', gTerminal:'3', catatan:'' });
     const wf = reactive(emptyForm());
 
     const toApiWatch = w => {
@@ -618,6 +479,15 @@ createApp({
       NUM_FIELDS.forEach(f=>{ o[f] = (r[f]===''||r[f]===null||r[f]===undefined) ? '' : String(r[f]); });
       return o;
     };
+
+    // ========== GOOGLE SHEETS SYNC ==========
+    const DEFAULT_SCRIPT_URL = '';
+    const getScriptUrl = () => (DEFAULT_SCRIPT_URL || '').trim() || (localStorage.getItem('apps-script-url') || '').trim();
+    const setScriptUrl = url => localStorage.setItem('apps-script-url', url.trim());
+    const syncStatus = reactive({ connected: !!getScriptUrl(), state:'idle', message:'' });
+
+    const toApiPortfolioRow = r => ({ id:r.id, tanggal:r.date, dana:r.dana, dividen:r.dividen||0, equity:r.equity, ihsg:r.ihsg });
+    const fromApiPortfolioRow = r => ({ id:String(r.id), date:String(r.tanggal), dana:Number(r.dana)||0, dividen:Number(r.dividen)||0, equity:Number(r.equity)||0, ihsg:Number(r.ihsg)||0 });
 
     async function loadData(){
       const url = getScriptUrl();
@@ -634,11 +504,11 @@ createApp({
           localStorage.setItem('watchlist-config', JSON.stringify(cfg));
           syncStatus.state='idle'; syncStatus.message='Tersambung ke Google Sheets.';
         }catch(e){
-          console.error('Gagal memuat dari Google Sheets', e);
+          console.error('Gagal memuat', e);
           const c = localStorage.getItem('nav-tracker-data-cache');
           rows.value = c ? JSON.parse(c) : [];
           loadWatchLocal();
-          syncStatus.state='error'; syncStatus.message='Gagal terhubung ke Google Sheets. Menampilkan data cache terakhir di perangkat ini.';
+          syncStatus.state='error'; syncStatus.message='Gagal terhubung. Menampilkan cache lokal.';
         }
       } else {
         try{
@@ -651,8 +521,8 @@ createApp({
           }
         }catch(e){ rows.value = []; }
         loadWatchLocal();
-        syncStatus.connected = false; syncStatus.state='idle';
-        syncStatus.message = 'Mode lokal — data hanya tersimpan di perangkat/browser ini. Sambungkan ke Google Sheets di tab Pengaturan supaya terpusat.';
+        syncStatus.connected = false;
+        syncStatus.message = 'Mode lokal — sambungkan ke Google Sheets untuk sinkronisasi.';
       }
     }
     function loadWatchLocal(){
@@ -675,7 +545,7 @@ createApp({
           rows.value = (json.portfolio||[]).map(fromApiPortfolioRow);
           syncStatus.state='idle'; syncStatus.message='Tersimpan ke Google Sheets.';
         }catch(e){
-          console.error(e); syncStatus.state='error'; syncStatus.message='Gagal menyimpan ke Google Sheets. Perubahan disimpan sementara di perangkat ini saja.';
+          console.error(e); syncStatus.state='error'; syncStatus.message='Gagal menyimpan ke Google Sheets.';
         }
       } else {
         try{
@@ -689,46 +559,46 @@ createApp({
       localStorage.setItem('watchlist-cache', JSON.stringify(wl.value));
       localStorage.setItem('watchlist-config', JSON.stringify(cfg));
       if(getScriptUrl()){
-        wlStatus.value = 'Menyimpan watchlist ke Google Sheets…';
+        wlStatus.value = 'Menyimpan watchlist…';
         try{
           const json = await postJson({action:'saveWatchlist', rows: wl.value.map(toApiWatch), config:{ params: JSON.parse(JSON.stringify(cfg)) }});
           if(!json.ok) throw new Error(json.error || 'Gagal menyimpan');
           wl.value = (json.watchlist||[]).map(fromApiWatch);
           localStorage.setItem('watchlist-cache', JSON.stringify(wl.value));
-          wlStatus.value = 'Watchlist tersimpan ke Google Sheets.';
+          wlStatus.value = 'Watchlist tersimpan.';
         }catch(e){
           console.error(e);
-          wlStatus.value = 'Gagal menyimpan ke Google Sheets (pastikan Apps Script sudah di-deploy ulang dengan New version). Data tersimpan sementara di perangkat ini.';
+          wlStatus.value = 'Mode lokal (pastikan Apps Script sudah di-deploy ulang).';
         }
       } else {
-        wlStatus.value = 'Mode lokal — watchlist tersimpan di browser ini.';
+        wlStatus.value = 'Mode lokal — tersimpan di browser.';
       }
     }
 
     async function refreshPrices(){
       if(!getScriptUrl()){
-        syncStatus.connected = false; syncStatus.state='error';
-        syncStatus.message = 'Update harga butuh koneksi ke Google Sheets (Apps Script) — sambungkan dulu di tab Pengaturan.';
+        syncStatus.state='error';
+        syncStatus.message = 'Butuh koneksi ke Google Sheets untuk update harga — sambungkan dulu di tab Pengaturan.';
         activeTab.value = 'pengaturan';
         return;
       }
       if(!wl.value.length){ wlStatus.value = 'Watchlist masih kosong.'; return; }
-      wlStatus.value = 'Mengambil harga dari Google Finance… bisa 15–60 detik.';
+      wlStatus.value = 'Mengambil harga dari Yahoo Finance… tunggu sebentar.';
       try{
         const json = await postJson({action:'refreshPrices', kodes: wl.value.map(w=>w.kode)});
         if(!json.ok) throw new Error(json.error || 'Gagal mengambil harga');
         let ok = 0; const now = new Date().toISOString();
         wl.value.forEach(w=>{ const p = json.prices[w.kode]; if(p>0){ w.price = String(p); w.updatedAt = now; ok++; } });
         await saveWatch();
-        wlStatus.value = 'Harga diperbarui untuk ' + ok + ' dari ' + wl.value.length + ' saham. (Google Finance IDX bisa tertunda ±20 menit.)';
+        wlStatus.value = 'Harga diperbarui untuk ' + ok + ' saham (Yahoo Finance delay ~15 menit).';
       }catch(e){
-        console.error(e); wlStatus.value = 'Gagal mengambil harga. Pastikan Apps Script sudah di-deploy ulang (New version) dan izin akses sudah diberikan.';
+        console.error(e); wlStatus.value = 'Gagal update harga — pastikan Apps Script sudah di-deploy ulang dengan New version.';
       }
     }
 
     async function connectScript(){ setScriptUrl(scriptUrlInput.value.trim()); await loadData(); }
 
-    // ---------- mesin fair value ----------
+    // ========== FAIR VALUE ENGINE ==========
     const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
     const num = v => { const x = parseFloat(v); return isFinite(x) ? x : 0; };
 
@@ -740,16 +610,23 @@ createApp({
       const gDiv = clamp(num(w.gDiv)/100, 0, gCap);
       const peT = num(w.peTarget), pbvT = num(w.pbvTarget);
 
+      // PE: earnings * target multiple
       const PE = (eps>0 && peT>0) ? eps*peT : 0;
+      
+      // PBV: book value * target PBV (atau auto-calculate dari ROE)
       let PBV = 0;
       if(bvps>0){
         if(pbvT>0) PBV = bvps*pbvT;
         else if(roe>0) PBV = bvps*clamp((roe/100 - gDiv)/(coe - gDiv), 0.5, 4);
       }
+      
+      // DDM: dividen model untuk dividend-paying stocks
       const DDM = dps>0 ? dps*(1+gDiv)/(coe-gDiv) : 0;
+      
+      // DCF: hanya untuk non-financial
       let DCF = 0;
       const fcf = num(w.fcfps);
-      if(fcf>0){
+      if(fcf>0 && !fin){
         const g1 = clamp(num(w.gFcf)/100, -0.2, 0.4);
         const gt = clamp(num(w.gTerminal)/100, 0, gCap);
         let f = fcf, pv = 0;
@@ -758,14 +635,15 @@ createApp({
         DCF = pv;
       }
 
+      // Weighted average fair value
       const vals = { dcf:DCF, pbv:PBV, pe:PE, ddm:DDM };
       const W = fin ? cfg.wFin : cfg.wNon;
       let tw = 0;
       METHODS.forEach(m=>{ if(vals[m.k]>0) tw += Math.max(0, num(W[m.k])); });
       let fair = 0;
       if(tw>0) METHODS.forEach(m=>{ if(vals[m.k]>0) fair += vals[m.k]*Math.max(0,num(W[m.k]))/tw; });
-      const methodRows = METHODS.map(m=>({ label:m.label, v:vals[m.k], eff:(vals[m.k]>0 && tw>0) ? Math.max(0,num(W[m.k]))/tw : 0 }));
 
+      // MOS dan sinyal
       const mosPct = clamp(num(cfg.mos), 0, 90)/100;
       const buyBelow = fair*(1-mosPct);
       const mos = (fair>0 && price>0) ? (fair-price)/fair : 0;
@@ -778,26 +656,15 @@ createApp({
       else if(price>=fair) sinyal = 'Mahal';
       else sinyal = 'Tunggu';
 
+      const methodRows = METHODS.map(m=>({ label:m.label, v:vals[m.k], eff:(vals[m.k]>0 && tw>0) ? Math.max(0,num(W[m.k]))/tw : 0 }));
+
       return { ...w, fin, owned, price, avgBuy:num(w.avgBuy), fair, buyBelow, mos, sinyal, methodRows };
     }
 
-    const SIG_CLS = {'Beli':'pill-gain','Hold':'pill-slate','Jual':'pill-loss','Tunggu':'pill-amber','Mahal':'pill-loss','Data kurang':'pill-slate'};
-    const SIG_ICO = {'Beli':'🟢','Hold':'✋','Jual':'🚨','Tunggu':'⏳','Mahal':'🔴','Data kurang':'❔'};
-    const sigCls = s => SIG_CLS[s] || 'pill-slate';
-    const sigIco = s => SIG_ICO[s] || '';
-    const SIG_ORDER = {'Jual':0,'Beli':1,'Hold':2,'Tunggu':3,'Mahal':4,'Data kurang':5};
-
+    const SIG_ORDER = {'Jual':0, 'Beli':1, 'Hold':2, 'Tunggu':3, 'Mahal':4, 'Data kurang':5};
     const analyzed = computed(()=> wl.value.map(analyzeWatch));
     const cnt = s => analyzed.value.filter(w=>w.sinyal===s).length;
-    const filters = [
-      {id:'all', label:'Semua'}, {id:'Beli', label:'🟢 Beli'}, {id:'owned', label:'📦 Dimiliki'}, {id:'Jual', label:'🚨 Jual'},
-      {id:'Tunggu', label:'⏳ Tunggu'}, {id:'fin', label:'🏦 Financial'}, {id:'non', label:'🏭 Non-financial'}
-    ];
-    const shownList = computed(()=>{
-      const f = filterId.value;
-      const pass = w => f==='all' ? true : f==='owned' ? w.owned : f==='fin' ? w.fin : f==='non' ? !w.fin : w.sinyal===f;
-      return analyzed.value.filter(pass).sort((a,b)=> (SIG_ORDER[a.sinyal]-SIG_ORDER[b.sinyal]) || (b.mos-a.mos));
-    });
+    const shownList = computed(()=> analyzed.value.sort((a,b)=> (SIG_ORDER[a.sinyal]-SIG_ORDER[b.sinyal]) || (b.mos-a.mos)));
 
     function submitWatch(){
       const kode = String(wf.kode||'').toUpperCase().trim();
@@ -806,21 +673,22 @@ createApp({
       if(!item.owned) item.avgBuy = '';
       const idx = wl.value.findIndex(w=>w.kode===kode);
       if(idx>=0) wl.value[idx] = { ...wl.value[idx], ...item }; else wl.value.push(item);
-      wEditing.value = null; Object.assign(wf, emptyForm());
+      wEditing.value = null; Object.assign(wf, emptyForm()); details_form_open.value = false;
       saveWatch();
     }
     function startEditWatch(kode){
       const w = wl.value.find(x=>x.kode===kode); if(!w) return;
       wEditing.value = kode; Object.assign(wf, emptyForm(), JSON.parse(JSON.stringify(w)));
+      details_form_open.value = true;
       window.scrollTo({top:0, behavior:'smooth'});
     }
-    function cancelEditWatch(){ wEditing.value = null; Object.assign(wf, emptyForm()); }
+    function cancelEditWatch(){ wEditing.value = null; Object.assign(wf, emptyForm()); details_form_open.value = false; }
     function deleteWatch(kode){
-      if(!confirm('Hapus ' + kode + ' dari watchlist?')) return;
+      if(!confirm('Hapus ' + kode + '?')) return;
       wl.value = wl.value.filter(w=>w.kode!==kode); saveWatch();
     }
 
-    // ---------- mesin perhitungan NAB ----------
+    // ========== PORTFOLIO ENGINE ==========
     function compute(){
       const sorted = [...rows.value].sort((a,b)=> a.date.localeCompare(b.date));
       let unitPrev = 0, nabPrev = 1000, ihsgPrev = null;
@@ -921,7 +789,7 @@ createApp({
         <path d="${linePath('nab')}" fill="none" stroke="#34D399" stroke-width="2.5"/>${dots('ihsgIdx','#FBBF24')}${dots('nab','#34D399')}${labels}</svg>`;
     }
 
-    // ---------- computed ----------
+    // ========== COMPUTED ==========
     const computedRows = computed(()=> compute());
     const reversedComputedRows = computed(()=> [...computedRows.value].reverse());
     const lastRow = computed(()=> computedRows.value[computedRows.value.length-1] || null);
@@ -933,7 +801,6 @@ createApp({
     const yearStats = computed(()=> yearFilter.value==='all' ? null : getYearStats(computedRows.value, parseInt(yearFilter.value)));
     const prevYearStats = computed(()=> yearFilter.value==='all' ? null : getYearStats(computedRows.value, parseInt(yearFilter.value)-1));
     const chartSvg = computed(()=> activeComputed.value.length>=2 ? buildChart(activeComputed.value) : '');
-    const monthlyPerf = computed(()=> [...activeComputed.value.slice(1)].reverse());
     const editingEntry = computed(()=> editingId.value ? rows.value.find(r=>r.id===editingId.value) : null);
 
     function syncEntryForm(){
@@ -963,16 +830,16 @@ createApp({
     onMounted(()=>{ loadData(); });
 
     return {
-      APP_VERSION, APP_BUILD, tabs, activeTab, rows, editingId, yearFilter, filterId, filters,
+      tabs, activeTab, details_param_open, details_form_open,
+      rows, editingId, yearFilter, wEditing, wlStatus,
       fDate, fDana, fEquity, fDividen, fIhsg, scriptUrlInput,
       fmtRp, fmtPct, fmtDate, fmtMonth, pctColor, cagrColor,
       syncStatus, connectScript,
       computedRows, reversedComputedRows, lastRow, totalReturn, cagr, totalDividenAllTime,
-      years, activeComputed, yearStats, prevYearStats, chartSvg, monthlyPerf, editingEntry,
+      years, activeComputed, yearStats, prevYearStats, chartSvg, editingEntry,
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
-      METHODS, cfg, wf, wEditing, wlStatus, analyzed, shownList, cnt, sigCls, sigIco, wSum,
+      METHODS, cfg, wf, analyzed, shownList, cnt, wSum,
       submitWatch, startEditWatch, cancelEditWatch, deleteWatch, saveWatch, resetCfg, refreshPrices,
-      activeMetrics, sectorDesc,
       parseInt, Math
     };
   }
