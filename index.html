@@ -50,6 +50,16 @@
   .watch-table tr:hover{background:rgba(52,211,153,.05)}
   .watch-table .code{font-weight:700;color:#1E293B}
   .watch-table .num{text-align:right;font-variant-numeric:tabular-nums}
+  .alok-input{width:100%;padding:.35rem .5rem;font-size:12px;text-align:right;border:1px solid rgba(15,23,42,.14);border-radius:.6rem;background:#fff;font-variant-numeric:tabular-nums}
+  .alok-input:focus{outline:none;border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.1)}
+  .alok-table tr.cash-row td{background:rgba(251,191,36,.10);border-bottom:2px solid rgba(251,191,36,.35)}
+  .alok-table tr.cash-row:hover td{background:rgba(251,191,36,.14)}
+  .alok-table tr.total-row td{background:rgba(15,23,42,.04);font-weight:700;border-top:2px solid rgba(15,23,42,.12)}
+  .alok-bar{display:flex;height:14px;border-radius:9999px;overflow:hidden;background:rgba(15,23,42,.06)}
+  .rb-now{background:rgba(244,63,94,.10);border:1px solid rgba(244,63,94,.35);color:#BE123C}
+  .rb-due{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);color:#B45309}
+  .rb-ok{background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.35);color:#0F766E}
+  .rb-info{background:rgba(100,116,139,.08);border:1px solid rgba(100,116,139,.25);color:#475569}
 </style>
 </head>
 <body>
@@ -271,8 +281,10 @@
             </div>
           </div>
 
-          <div v-if="wf.owned" class="flex gap-3">
-            <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Harga Beli Rata-rata (Rp)</label><input type="number" step="any" v-model="wf.avgBuy" placeholder="0" class="input-field"></div>
+          <div v-if="wf.owned" class="flex gap-3 flex-wrap">
+            <div class="flex-1" style="min-width:140px"><label class="text-xs text-slate-400 block mb-1">Harga Beli Rata-rata (Rp)</label><input type="number" step="any" v-model="wf.avgBuy" placeholder="0" class="input-field"></div>
+            <div class="flex-1" style="min-width:140px"><label class="text-xs text-slate-400 block mb-1">Jumlah Lot</label><input type="number" step="any" min="0" v-model="wf.lots" placeholder="0" class="input-field"><p class="field-hint">1 lot = 100 lembar</p></div>
+            <div class="flex-1" style="min-width:140px"><label class="text-xs text-slate-400 block mb-1">Target Alokasi (%)</label><input type="number" step="any" min="0" max="100" v-model="wf.targetAlok" placeholder="mis. 20" class="input-field"><p class="field-hint">Dipakai di tab Alokasi</p></div>
           </div>
 
           <div class="section-header">Data Fundamental</div>
@@ -352,6 +364,136 @@
     <div v-else class="glass-card p-8 text-center text-slate-500">Watchlist kosong. Tambahkan saham di atas.</div>
   </div>
 
+  <!-- TAB: ALOKASI -->
+  <div v-else-if="activeTab==='alokasi'" class="space-y-4">
+
+    <div class="hero-card">
+      <div class="hero-glow"></div>
+      <p class="text-emerald-50/80 text-xs font-semibold mb-1 relative">⚖️ Total aset (saham + kas RDN)</p>
+      <p class="text-4xl font-extrabold text-white relative">{{ fmtRp(alokasi.total) }}</p>
+      <div class="flex gap-4 mt-4 pt-4 border-t border-white/20 flex-wrap relative">
+        <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">📦 Nilai saham</p><p class="text-[15px] font-bold text-white">{{ fmtRp(alokasi.stockValue) }}</p></div>
+        <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">🏦 Kas RDN</p><p class="text-[15px] font-bold text-white">{{ fmtRp(alokasi.cash) }}</p></div>
+        <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">{{ alokasi.glTotal>=0 ? '🚀' : '📉' }} Gain/Loss saham</p><p class="text-[15px] font-bold" :class="alokasi.glTotal>=0 ? 'text-emerald-100' : 'text-rose-100'">{{ fmtRpS(alokasi.glTotal) }} ({{ fmtPct(alokasi.glTotalPct) }})</p></div>
+      </div>
+    </div>
+
+    <div class="glass-card p-4">
+      <h2 class="font-bold text-slate-800 mb-1">🔔 Status Rebalancing</h2>
+      <div class="rounded-2xl p-3 mt-2 text-sm font-semibold" :class="'rb-' + alokasi.status.level">{{ alokasi.status.text }}</div>
+      <p v-if="alokasi.status.detail" class="text-[11px] text-slate-500 mt-2">{{ alokasi.status.detail }}</p>
+      <div class="grid gap-3 mt-4" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
+        <div><label class="text-xs text-slate-400 block mb-1">Batas selisih (± poin %)</label><input type="number" step="0.5" min="0" v-model.number="cfgA.band" @change="saveWatch" class="input-field"><p class="field-hint">Rebalancing jika alokasi melenceng lebih dari ini dari target</p></div>
+        <div><label class="text-xs text-slate-400 block mb-1">Interval berkala (bulan)</label><input type="number" step="1" min="1" v-model.number="cfgA.months" @change="saveWatch" class="input-field"><p class="field-hint">Cek rutin walau belum melewati batas</p></div>
+        <div><label class="text-xs text-slate-400 block mb-1">Rebalancing terakhir</label><input type="date" v-model="cfgA.lastRebal" @change="saveWatch" class="input-field"></div>
+      </div>
+      <div class="flex gap-2 mt-3">
+        <button @click="markRebal" class="btn-primary btn-sm flex-1">✅ Tandai sudah rebalancing hari ini</button>
+        <button @click="refreshPrices" :disabled="refreshing" class="btn-secondary btn-sm flex-1">{{ refreshing ? '⏳ Memuat…' : '🔄 Update harga' }}</button>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-2">{{ wlStatus }}</p>
+    </div>
+
+    <div class="glass-card p-4">
+      <h2 class="font-bold text-slate-800 mb-1">🥧 Komposisi Aset</h2>
+      <div v-if="alokasi.total>0">
+        <div class="alok-bar mt-3">
+          <div v-if="alokasi.cashWeight>0" :style="{width: alokasi.cashWeight+'%', background:'#FBBF24'}" :title="'Kas ' + alokasi.cashWeight.toFixed(1) + '%'"></div>
+          <div v-for="(r,i) in alokasi.rows" :key="r.kode" :style="{width: r.weight+'%', background: PALETTE[i % PALETTE.length]}" :title="r.kode + ' ' + r.weight.toFixed(1) + '%'"></div>
+        </div>
+        <div class="flex gap-x-4 gap-y-1 mt-3 flex-wrap text-[11px] text-slate-500">
+          <span class="flex items-center gap-1.5"><span class="dot" style="background:#FBBF24;"></span>Kas {{ alokasi.cashWeight.toFixed(1) }}%</span>
+          <span v-for="(r,i) in alokasi.rows" :key="'l'+r.kode" class="flex items-center gap-1.5"><span class="dot" :style="{background: PALETTE[i % PALETTE.length]}"></span>{{ r.kode }} {{ r.weight.toFixed(1) }}%</span>
+        </div>
+      </div>
+      <div v-else class="text-center text-slate-500 text-sm py-4">Isi saldo RDN dan jumlah lot saham untuk melihat komposisi.</div>
+    </div>
+
+    <div class="glass-card p-4 overflow-x-auto scrollbar-thin">
+      <h2 class="font-bold text-slate-800 mb-1">⚖️ Alokasi Saham yang Dimiliki</h2>
+      <p class="text-xs text-slate-400 mb-3">Tandai saham sebagai "Dimiliki" di tab Watchlist, lalu isi jumlah lot. Lot dan target % bisa diubah langsung di tabel.</p>
+      <p v-if="alokasi.missingPrice" class="text-[11px] text-amber-600 mb-2">⚠️ {{ alokasi.missingPrice }} saham belum punya harga — tekan "Update harga".</p>
+      <p v-if="alokasi.ownedNoLot" class="text-[11px] text-amber-600 mb-2">⚠️ {{ alokasi.ownedNoLot }} saham dimiliki tetapi jumlah lot belum diisi.</p>
+      <table class="watch-table alok-table" style="min-width:1100px;">
+        <thead>
+          <tr>
+            <th style="min-width:80px">Kode</th>
+            <th class="num" style="min-width:70px">Lot</th>
+            <th class="num" style="min-width:90px">Harga Beli</th>
+            <th class="num" style="min-width:90px">Harga Kini</th>
+            <th class="num" style="min-width:90px">Naik/Lembar</th>
+            <th class="num" style="min-width:110px">Nilai Pasar</th>
+            <th class="num" style="min-width:110px">Modal</th>
+            <th class="num" style="min-width:110px">Gain/Loss (Rp)</th>
+            <th class="num" style="min-width:80px">Gain/Loss (%)</th>
+            <th class="num" style="min-width:80px">Alokasi</th>
+            <th class="num" style="min-width:80px">Target</th>
+            <th class="num" style="min-width:80px">Selisih</th>
+            <th style="min-width:170px">Rebalancing</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- BARIS PALING ATAS: SALDO RDN / CASH -->
+          <tr class="cash-row">
+            <td class="code">🏦 RDN / Cash</td>
+            <td class="num text-slate-400">—</td>
+            <td class="num text-slate-400">—</td>
+            <td class="num text-slate-400">—</td>
+            <td class="num text-slate-400">—</td>
+            <td class="num"><input type="number" min="0" step="any" class="alok-input" style="min-width:110px" v-model.number="cfgA.cash" @change="saveWatch" placeholder="Saldo RDN"></td>
+            <td class="num text-slate-400">—</td>
+            <td class="num text-slate-400">—</td>
+            <td class="num text-slate-400">—</td>
+            <td class="num font-semibold">{{ alokasi.total>0 ? alokasi.cashWeight.toFixed(1) + '%' : '—' }}</td>
+            <td class="num"><input type="number" min="0" max="100" step="any" class="alok-input" v-model.number="cfgA.cashTarget" @change="saveWatch" placeholder="%"></td>
+            <td class="num" :class="devColor(alokasi.cashDev)"><span class="font-semibold">{{ alokasi.cashDev===null ? '—' : fmtPp(alokasi.cashDev) }}</span></td>
+            <td><span class="status-badge" :class="alokasi.cashAction.cls">{{ alokasi.cashAction.text }}</span></td>
+          </tr>
+          <tr v-for="r in alokasi.rows" :key="r.kode">
+            <td class="code">{{ r.kode }}<div class="text-slate-500 font-normal" style="font-size:10px">{{ r.nama }}</div></td>
+            <td class="num"><input type="number" min="0" step="any" class="alok-input" :value="r.lots" @change="setWatchField(r.kode,'lots',$event.target.value)"></td>
+            <td class="num text-slate-600">{{ r.avg>0 ? fmtRp(r.avg) : '—' }}</td>
+            <td class="num text-slate-700 font-semibold">{{ r.price>0 ? fmtRp(r.price) : '—' }}</td>
+            <td class="num" :class="pctColor(r.perShare)">{{ r.perShare===null ? '—' : fmtRpS(r.perShare) }}</td>
+            <td class="num text-slate-700 font-semibold">{{ r.price>0 ? fmtRp(r.value) : '—' }}</td>
+            <td class="num text-slate-600">{{ r.avg>0 ? fmtRp(r.cost) : '—' }}</td>
+            <td class="num font-semibold" :class="pctColor(r.gl)">{{ r.gl===null ? '—' : fmtRpS(r.gl) }}</td>
+            <td class="num font-semibold" :class="pctColor(r.glPct)">{{ r.glPct===null ? '—' : fmtPct(r.glPct) }}</td>
+            <td class="num font-semibold">{{ alokasi.total>0 ? r.weight.toFixed(1) + '%' : '—' }}</td>
+            <td class="num"><input type="number" min="0" max="100" step="any" class="alok-input" :value="r.targetRaw" @change="setWatchField(r.kode,'targetAlok',$event.target.value)" placeholder="%"></td>
+            <td class="num" :class="devColor(r.dev)"><span class="font-semibold">{{ r.dev===null ? '—' : fmtPp(r.dev) }}</span></td>
+            <td><span class="status-badge" :class="r.action.cls">{{ r.action.text }}</span><div v-if="r.action.sub" class="text-slate-500" style="font-size:10px;margin-top:2px">{{ r.action.sub }}</div></td>
+          </tr>
+          <tr v-if="!alokasi.rows.length"><td colspan="13" class="text-center text-slate-500" style="padding:1.5rem">Belum ada saham dimiliki dengan jumlah lot. Buka tab Watchlist → ubah saham → centang "Ya, saya punya" → isi lot.</td></tr>
+        </tbody>
+        <tfoot v-if="alokasi.rows.length || alokasi.cash>0">
+          <tr class="total-row">
+            <td>Total</td>
+            <td class="num">{{ fmtLot(alokasi.totalLots) }}</td>
+            <td class="num"></td><td class="num"></td><td class="num"></td>
+            <td class="num">{{ fmtRp(alokasi.total) }}</td>
+            <td class="num">{{ fmtRp(alokasi.totalCost) }}</td>
+            <td class="num" :class="pctColor(alokasi.glTotal)">{{ fmtRpS(alokasi.glTotal) }}</td>
+            <td class="num" :class="pctColor(alokasi.glTotalPct)">{{ fmtPct(alokasi.glTotalPct) }}</td>
+            <td class="num">{{ alokasi.total>0 ? '100%' : '—' }}</td>
+            <td class="num" :class="Math.abs(alokasi.targetSum-100)>0.01 && alokasi.targetSum>0 ? 'text-amber-600' : ''">{{ alokasi.targetSum>0 ? alokasi.targetSum.toFixed(1) + '%' : '—' }}</td>
+            <td class="num"></td><td></td>
+          </tr>
+        </tfoot>
+      </table>
+      <p v-if="alokasi.targetSum>0 && Math.abs(alokasi.targetSum-100)>0.01" class="text-[11px] text-amber-600 mt-2">⚠️ Total target {{ alokasi.targetSum.toFixed(1) }}% — idealnya 100% (termasuk target kas).</p>
+    </div>
+
+    <div class="glass-card p-4">
+      <h2 class="font-bold text-slate-800 mb-2">📋 Cara Membaca</h2>
+      <div class="text-xs text-slate-600 space-y-2 leading-relaxed">
+        <p><strong>Gain/Loss:</strong> (Harga kini − Harga beli rata-rata) × lembar. Persen dihitung terhadap modal.</p>
+        <p><strong>Alokasi:</strong> Nilai pasar tiap saham ÷ total aset (saham + saldo RDN).</p>
+        <p><strong>Kapan rebalancing:</strong> (1) saat alokasi suatu saham atau kas melenceng lebih dari batas ± poin % dari targetnya, atau (2) saat interval berkala (default 6 bulan) sejak rebalancing terakhir sudah lewat. Kolom Rebalancing menunjukkan estimasi lot yang perlu dibeli/dijual agar kembali ke target (belum termasuk fee & pajak).</p>
+      </div>
+    </div>
+  </div>
+
   <!-- TAB: PENGATURAN -->
   <div v-else-if="activeTab==='pengaturan'" class="space-y-4">
     <div class="glass-card p-4">
@@ -396,6 +538,7 @@ createApp({
       { id:'ringkasan', emoji:'📊', label:'Ringkasan' },
       { id:'data', emoji:'💼', label:'Portofolio' },
       { id:'watchlist', emoji:'👁️', label:'Watchlist' },
+      { id:'alokasi', emoji:'⚖️', label:'Alokasi' },
       { id:'pengaturan', emoji:'⚙️', label:'Pengaturan' },
     ];
     const activeTab = ref('ringkasan');
@@ -413,16 +556,21 @@ createApp({
     const scriptUrlInput = ref(localStorage.getItem('apps-script-url') || '');
 
     const fmtRp = n => 'Rp' + Math.round(n).toLocaleString('id-ID');
+    const fmtRpS = n => (n===null||n===undefined||isNaN(n)) ? '—' : ((n>=0?'+':'-') + fmtRp(Math.abs(n)));
     const fmtPct = n => (n===null||n===undefined||isNaN(n)) ? '—' : (n>=0?'+':'') + (n*100).toFixed(2) + '%';
+    const fmtPp = n => (n===null||n===undefined||isNaN(n)) ? '—' : (n>=0?'+':'') + n.toFixed(1) + ' pp';
+    const fmtLot = n => (Math.round(n*100)/100).toLocaleString('id-ID');
     const fmtDate = s => new Date(s+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
     const pctColor = v => v===null||v===undefined ? 'text-slate-400' : (v>=0 ? 'text-emerald-600' : 'text-rose-600');
     const cagrColor = v => v===null||v===undefined ? 'text-slate-500' : (v>=0 ? 'text-emerald-600' : 'text-rose-600');
+    const devColor = v => v===null||v===undefined ? 'text-slate-400' : (v>=0 ? 'text-emerald-600' : 'text-rose-600');
 
     const hasClaudeStorage = (typeof window.storage !== 'undefined');
 
     // ========== WATCHLIST CONFIG ==========
     const METHODS = [ {k:'dcf',label:'DCF'}, {k:'pbv',label:'PBV'}, {k:'pe',label:'PE'}, {k:'ddm',label:'DDM'} ];
-    const NUM_FIELDS = ['avgBuy','price','eps','bvps','dps','roe','gDiv','peTarget','pbvTarget','fcfps','gFcf','gTerminal'];
+    const NUM_FIELDS = ['avgBuy','lots','targetAlok','price','eps','bvps','dps','roe','gDiv','peTarget','pbvTarget','fcfps','gFcf','gTerminal'];
+    const PALETTE = ['#34D399','#0D9488','#60A5FA','#A78BFA','#F472B6','#FB923C','#22D3EE','#84CC16','#F87171','#94A3B8'];
 
     const defaultCfg = () => ({
       coe: 13,
@@ -442,10 +590,21 @@ createApp({
     function resetCfg(){ applyCfg(defaultCfg()); saveWatch(); }
     const wSum = o => METHODS.reduce((a,m)=>a+(Number(o[m.k])||0),0);
 
+    // ========== ALOKASI CONFIG (disimpan di sheet Config, key "alokasi") ==========
+    const cfgA = reactive({ cash:0, cashTarget:'', band:5, months:6, lastRebal:'' });
+    function applyAlok(a){
+      if(!a || typeof a!=='object') return;
+      if(a.cash!==undefined) cfgA.cash = Number(a.cash)||0;
+      if(a.cashTarget!==undefined) cfgA.cashTarget = (a.cashTarget===''||a.cashTarget===null) ? '' : (Number(a.cashTarget)||0);
+      if(a.band!==undefined) cfgA.band = Number(a.band)||0;
+      if(a.months!==undefined) cfgA.months = Number(a.months)||6;
+      if(a.lastRebal!==undefined) cfgA.lastRebal = String(a.lastRebal||'');
+    }
+
     // Kode disimpan polos (BBCA). Data lama "IDX:BBCA" / "BBCA.JK" otomatis dinormalisasi.
     const normKode = k => String(k||'').toUpperCase().trim().replace(/^IDX:/,'').replace(/\.JK$/,'');
 
-    const emptyForm = () => ({ kode:'', nama:'', tipe:'non', owned:false, avgBuy:'', price:'', eps:'', bvps:'', dps:'', roe:'',
+    const emptyForm = () => ({ kode:'', nama:'', tipe:'non', owned:false, avgBuy:'', lots:'', targetAlok:'', price:'', eps:'', bvps:'', dps:'', roe:'',
       gDiv:'5', peTarget:'', pbvTarget:'', fcfps:'', gFcf:'8', gTerminal:'3', catatan:'' });
     const wf = reactive(emptyForm());
 
@@ -479,9 +638,11 @@ createApp({
           rows.value = (json.portfolio||[]).map(fromApiPortfolioRow);
           wl.value = (json.watchlist||[]).map(fromApiWatch);
           if(json.config && json.config.params) applyCfg(json.config.params);
+          if(json.config && json.config.alokasi) applyAlok(json.config.alokasi);
           localStorage.setItem('nav-tracker-data-cache', JSON.stringify(rows.value));
           localStorage.setItem('watchlist-cache', JSON.stringify(wl.value));
           localStorage.setItem('watchlist-config', JSON.stringify(cfg));
+          localStorage.setItem('alokasi-config', JSON.stringify(cfgA));
           syncStatus.state='idle'; syncStatus.message='Tersambung ke Google Sheets.';
         }catch(e){
           console.error('Gagal memuat', e);
@@ -508,6 +669,7 @@ createApp({
     function loadWatchLocal(){
       try{ const c = localStorage.getItem('watchlist-cache'); wl.value = c ? JSON.parse(c).map(w=>({...w, kode:normKode(w.kode)})) : []; }catch(e){ wl.value = []; }
       try{ const c = localStorage.getItem('watchlist-config'); if(c) applyCfg(JSON.parse(c)); }catch(e){}
+      try{ const c = localStorage.getItem('alokasi-config'); if(c) applyAlok(JSON.parse(c)); }catch(e){}
     }
 
     async function postJson(payload){
@@ -538,10 +700,11 @@ createApp({
     async function saveWatch(){
       localStorage.setItem('watchlist-cache', JSON.stringify(wl.value));
       localStorage.setItem('watchlist-config', JSON.stringify(cfg));
+      localStorage.setItem('alokasi-config', JSON.stringify(cfgA));
       if(getScriptUrl()){
         wlStatus.value = 'Menyimpan watchlist…';
         try{
-          const json = await postJson({action:'saveWatchlist', rows: wl.value.map(toApiWatch), config:{ params: JSON.parse(JSON.stringify(cfg)) }});
+          const json = await postJson({action:'saveWatchlist', rows: wl.value.map(toApiWatch), config:{ params: JSON.parse(JSON.stringify(cfg)), alokasi: JSON.parse(JSON.stringify(cfgA)) }});
           if(!json.ok) throw new Error(json.error || 'Gagal menyimpan');
           wl.value = (json.watchlist||[]).map(fromApiWatch);
           localStorage.setItem('watchlist-cache', JSON.stringify(wl.value));
@@ -656,7 +819,7 @@ createApp({
       const kode = normKode(wf.kode);
       if(!kode) return;
       const item = { ...JSON.parse(JSON.stringify(wf)), kode, updatedAt:new Date().toISOString() };
-      if(!item.owned) item.avgBuy = '';
+      if(!item.owned){ item.avgBuy = ''; item.lots = ''; item.targetAlok = ''; }
       const idx = wl.value.findIndex(w=>w.kode===kode);
       if(idx>=0) wl.value[idx] = { ...wl.value[idx], ...item }; else wl.value.push(item);
       wEditing.value = null; Object.assign(wf, emptyForm()); formOpen.value = false;
@@ -673,6 +836,118 @@ createApp({
       if(!confirm('Hapus ' + kode + '?')) return;
       wl.value = wl.value.filter(w=>w.kode!==kode); saveWatch();
     }
+
+    // ========== ALOKASI ENGINE ==========
+    function setWatchField(kode, field, val){
+      const idx = wl.value.findIndex(w=>w.kode===kode);
+      if(idx<0) return;
+      wl.value[idx] = { ...wl.value[idx], [field]: String(val).trim(), updatedAt:new Date().toISOString() };
+      saveWatch();
+    }
+
+    const toISO = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    function markRebal(){ cfgA.lastRebal = toISO(new Date()); saveWatch(); }
+
+    const alokasi = computed(()=>{
+      const owned = analyzed.value.filter(w=>w.owned);
+      const held = owned.filter(w=>num(w.lots)>0);
+      const ownedNoLot = owned.length - held.length;
+      const band = Math.max(0, num(cfgA.band));
+      const cash = Math.max(0, num(cfgA.cash));
+
+      let rowsA = held.map(w=>{
+        const lots = num(w.lots), shares = lots*100, price = w.price, avg = w.avgBuy;
+        const value = shares*price, cost = shares*avg;
+        const valid = price>0 && avg>0;
+        const targetRaw = String(w.targetAlok===undefined||w.targetAlok===null ? '' : w.targetAlok).trim();
+        return { kode:w.kode, nama:w.nama||'', lots, shares, price, avg, value, cost,
+          gl: valid ? value-cost : null,
+          glPct: valid ? price/avg-1 : null,
+          perShare: valid ? price-avg : null,
+          targetRaw, hasTarget: targetRaw!=='', target: num(targetRaw) };
+      });
+
+      const stockValue = rowsA.reduce((a,r)=>a+r.value,0);
+      const total = stockValue + cash;
+      const missingPrice = rowsA.filter(r=>!(r.price>0)).length;
+
+      rowsA = rowsA.map(r=>{
+        const weight = total>0 ? r.value/total*100 : 0;
+        const dev = r.hasTarget ? weight - r.target : null;
+        let action = { text:'—', cls:'status-datakurang', sub:'' };
+        if(r.hasTarget && total>0 && r.price>0){
+          if(Math.abs(dev) <= band){
+            action = { text:'✓ Sesuai target', cls:'status-hold', sub:'' };
+          } else {
+            const diffValue = r.target/100*total - r.value;
+            const dLots = Math.round(diffValue/(r.price*100));
+            if(dLots===0) action = { text:'✓ Sesuai target', cls:'status-hold', sub:'' };
+            else if(dLots>0) action = { text:'Beli ' + dLots + ' lot', cls:'status-beli', sub:'≈ ' + fmtRp(dLots*r.price*100) };
+            else action = { text:'Jual ' + Math.abs(dLots) + ' lot', cls:'status-jual', sub:'≈ ' + fmtRp(Math.abs(dLots)*r.price*100) };
+          }
+        }
+        return { ...r, weight, dev, action };
+      }).sort((a,b)=> b.value - a.value);
+
+      const cashWeight = total>0 ? cash/total*100 : 0;
+      const cashHasTarget = String(cfgA.cashTarget===undefined||cfgA.cashTarget===null ? '' : cfgA.cashTarget).trim()!=='';
+      const cashTarget = num(cfgA.cashTarget);
+      const cashDev = cashHasTarget ? cashWeight - cashTarget : null;
+      let cashAction = { text:'—', cls:'status-datakurang' };
+      if(cashHasTarget && total>0){
+        if(Math.abs(cashDev) <= band) cashAction = { text:'✓ Sesuai target', cls:'status-hold' };
+        else if(cashDev>0) cashAction = { text:'Kas berlebih ' + fmtRp(cash - cashTarget/100*total), cls:'status-tunggu' };
+        else cashAction = { text:'Kas kurang ' + fmtRp(cashTarget/100*total - cash), cls:'status-tunggu' };
+      }
+
+      // Gain/Loss total (hanya saham dengan harga & harga beli valid)
+      const validRows = rowsA.filter(r=>r.gl!==null);
+      const glTotal = validRows.reduce((a,r)=>a+r.gl,0);
+      const costValid = validRows.reduce((a,r)=>a+r.cost,0);
+      const glTotalPct = costValid>0 ? glTotal/costValid : null;
+      const totalCost = rowsA.reduce((a,r)=>a+r.cost,0);
+      const totalLots = rowsA.reduce((a,r)=>a+r.lots,0);
+      const targetSum = rowsA.reduce((a,r)=>a+(r.hasTarget?r.target:0),0) + (cashHasTarget?cashTarget:0);
+
+      // Status rebalancing
+      const breaches = rowsA.filter(r=>r.dev!==null && Math.abs(r.dev)>band).map(r=>r.kode);
+      if(cashDev!==null && Math.abs(cashDev)>band) breaches.push('Kas');
+      const anyTarget = rowsA.some(r=>r.hasTarget) || cashHasTarget;
+
+      const months = Math.max(1, Math.round(num(cfgA.months)) || 6);
+      let nextDate = null, daysLeft = null, due = false;
+      if(cfgA.lastRebal){
+        const d = new Date(cfgA.lastRebal + 'T00:00:00');
+        if(!isNaN(d)){
+          d.setMonth(d.getMonth() + months);
+          nextDate = d;
+          const today = new Date(); today.setHours(0,0,0,0);
+          daysLeft = Math.round((d - today)/86400000);
+          due = daysLeft <= 0;
+        }
+      }
+      const nextStr = nextDate ? fmtDate(toISO(nextDate)) : '';
+
+      let status;
+      if(!rowsA.length && cash<=0){
+        status = { level:'info', text:'Belum ada data alokasi.', detail:'Isi saldo RDN dan jumlah lot saham yang dimiliki.' };
+      } else if(breaches.length){
+        status = { level:'now', text:'🚨 Saatnya rebalancing: ' + breaches.join(', ') + ' melenceng lebih dari ±' + band + ' poin dari target.',
+          detail: nextDate ? 'Jadwal berkala berikutnya: ' + nextStr + '.' : 'Isi tanggal rebalancing terakhir untuk jadwal berkala.' };
+      } else if(due){
+        status = { level:'due', text:'⏰ Sudah waktunya rebalancing berkala (interval ' + months + ' bulan terlewat sejak ' + fmtDate(cfgA.lastRebal) + ').',
+          detail: anyTarget ? 'Semua posisi masih dalam batas ±' + band + ' poin, tinjau ulang target dan fundamental.' : 'Belum ada target alokasi yang diisi.' };
+      } else if(!anyTarget){
+        status = { level:'info', text:'Isi target alokasi (%) tiap saham dan kas untuk mengaktifkan sinyal rebalancing.', detail: nextDate ? 'Jadwal berkala berikutnya: ' + nextStr + '.' : '' };
+      } else if(!cfgA.lastRebal){
+        status = { level:'ok', text:'✅ Semua posisi dalam batas ±' + band + ' poin dari target.', detail:'Isi tanggal rebalancing terakhir (atau tekan "Tandai sudah rebalancing") agar jadwal berkala aktif.' };
+      } else {
+        status = { level:'ok', text:'✅ Belum perlu rebalancing. Semua posisi dalam batas ±' + band + ' poin.', detail:'Jadwal berkala berikutnya: ' + nextStr + ' (' + daysLeft + ' hari lagi).' };
+      }
+
+      return { rows:rowsA, cash, stockValue, total, cashWeight, cashDev, cashAction, glTotal, glTotalPct, totalCost, totalLots,
+        targetSum, missingPrice, ownedNoLot, status };
+    });
 
     // ========== PORTFOLIO ENGINE ==========
     function compute(){
@@ -819,13 +1094,14 @@ createApp({
       tabs, activeTab, formOpen, refreshing,
       rows, editingId, yearFilter, wEditing, wlStatus,
       fDate, fDana, fEquity, fDividen, fIhsg, scriptUrlInput,
-      fmtRp, fmtPct, fmtDate, pctColor, cagrColor,
+      fmtRp, fmtRpS, fmtPct, fmtPp, fmtLot, fmtDate, pctColor, cagrColor, devColor,
       syncStatus, connectScript,
       computedRows, reversedComputedRows, lastRow, totalReturn, cagr, totalDividenAllTime,
       years, activeComputed, yearStats, prevYearStats, chartSvg, editingEntry,
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
       METHODS, cfg, wf, analyzed, shownList, cnt, wSum,
       submitWatch, startEditWatch, cancelEditWatch, deleteWatch, saveWatch, resetCfg, refreshPrices,
+      cfgA, alokasi, setWatchField, markRebal, PALETTE,
       parseInt
     };
   }
