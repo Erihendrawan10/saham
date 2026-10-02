@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tracking Kinerja Saham - Dynamic Watchlist v5</title>
+<title>Tracking Kinerja Saham v6</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
 <style>
@@ -21,16 +21,10 @@
   .btn-primary{background:linear-gradient(135deg,#34D399,#0D9488);color:#052E27;font-weight:700;font-size:14px;padding:.68rem;border:none;border-radius:.9rem;cursor:pointer;box-shadow:0 10px 24px -8px rgba(16,185,129,.4);transition:all .2s}
   .btn-primary:active{transform:scale(.97)}
   .btn-primary:hover{box-shadow:0 15px 35px -10px rgba(16,185,129,.5)}
+  .btn-primary:disabled{opacity:.6;cursor:wait}
   .btn-secondary{background:rgba(15,23,42,.04);color:#334155;border:1px solid rgba(15,23,42,.12);font-weight:600;font-size:13px;padding:.62rem;border-radius:.9rem;cursor:pointer;transition:all .2s}
   .btn-secondary:hover{background:rgba(15,23,42,.08)}
   .btn-sm{font-size:11px;padding:.4rem .6rem}
-  .pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:9999px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
-  .pill-gain{background:rgba(16,185,129,.12);color:#0D9488}
-  .pill-loss{background:rgba(244,63,94,.12);color:#E11D48}
-  .pill-amber{background:rgba(245,158,11,.14);color:#B45309}
-  .pill-slate{background:rgba(100,116,139,.12);color:#475569}
-  .chip{font-size:12px;font-weight:600;padding:5px 12px;border-radius:9999px;border:1px solid rgba(15,23,42,.12);background:rgba(15,23,42,.03);color:#475569;cursor:pointer;white-space:nowrap;transition:all .2s}
-  .chip-on{background:linear-gradient(135deg,#34D399,#0D9488);color:#052E27;border-color:transparent}
   .dot{width:8px;height:8px;border-radius:9999px;display:inline-block}
   .tab-btn{transition:all .18s ease}
   .scrollbar-thin::-webkit-scrollbar{height:6px}
@@ -42,12 +36,13 @@
   .method-input{padding:.5rem .6rem;font-size:12px}
   .section-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748B;margin-top:1.25rem;margin-bottom:.75rem;padding-top:.75rem;border-top:1px solid rgba(15,23,42,.08)}
   .field-hint{font-size:10px;color:#94A3B8;margin-top:.25rem;font-style:italic}
-  .status-badge{font-size:11px;font-weight:700;padding:.35rem .6rem;border-radius:.6rem;text-align:center;min-width:60px}
+  .status-badge{display:inline-block;font-size:11px;font-weight:700;padding:.35rem .6rem;border-radius:.6rem;text-align:center;min-width:60px}
   .status-beli{background:rgba(16,185,129,.15);color:#0D9488}
   .status-hold{background:rgba(100,116,139,.15);color:#475569}
   .status-jual{background:rgba(244,63,94,.15);color:#E11D48}
   .status-tunggu{background:rgba(245,158,11,.15);color:#B45309}
   .status-mahal{background:rgba(244,63,94,.15);color:#E11D48}
+  .status-datakurang{background:rgba(100,116,139,.1);color:#94A3B8}
   .watch-table{width:100%;border-collapse:collapse;font-size:13px}
   .watch-table th{background:rgba(15,23,42,.04);padding:.75rem;text-align:left;font-weight:700;color:#64748B;border-bottom:1px solid rgba(15,23,42,.12)}
   .watch-table td{padding:.75rem;border-bottom:1px solid rgba(15,23,42,.08)}
@@ -55,7 +50,6 @@
   .watch-table tr:hover{background:rgba(52,211,153,.05)}
   .watch-table .code{font-weight:700;color:#1E293B}
   .watch-table .num{text-align:right;font-variant-numeric:tabular-nums}
-  .divider-h{height:1px;background:linear-gradient(90deg,transparent,rgba(15,23,42,.1),transparent);margin:1.5rem 0}
 </style>
 </head>
 <body>
@@ -200,27 +194,22 @@
     </div>
   </div>
 
-  <!-- TAB: WATCHLIST v5 - RESTRUCTURED -->
+  <!-- TAB: WATCHLIST -->
   <div v-else-if="activeTab==='watchlist'" class="space-y-4">
 
-    <!-- BAGIAN 1: SYNC STATUS & UPDATE HARGA -->
     <div class="glass-card p-4">
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-between gap-3">
         <div>
           <h2 class="font-bold text-slate-800">👁️ Watchlist Saham</h2>
           <p class="text-xs text-slate-400 mt-1">{{ analyzed.length }} saham · 🟢 {{ cnt('Beli') }} · ✋ {{ cnt('Hold') }} · 🚨 {{ cnt('Jual') }} · ⏳ {{ cnt('Tunggu') }} · 🔴 {{ cnt('Mahal') }}</p>
         </div>
-        <button @click="refreshPrices" class="btn-primary btn-sm">🔄 Update harga</button>
+        <button @click="refreshPrices" :disabled="refreshing" class="btn-primary btn-sm whitespace-nowrap">{{ refreshing ? '⏳ Memuat…' : '🔄 Update harga' }}</button>
       </div>
       <p class="text-[11px] text-slate-500 mt-2">{{ wlStatus }}</p>
     </div>
 
-    <!-- BAGIAN 2: PARAMETER & BOBOT (PALING ATAS) -->
     <details open class="glass-card">
-      <summary class="p-4 font-bold text-slate-800 flex items-center justify-between cursor-pointer">
-        <span>⚙️ Parameter & Bobot Metode</span>
-        <span class="text-xs text-slate-400">{{ details_param_open ? '▼' : '▶' }}</span>
-      </summary>
+      <summary class="p-4 font-bold text-slate-800">⚙️ Parameter & Bobot Metode</summary>
       <div class="px-4 pb-4 space-y-4">
         <div class="flex gap-3">
           <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Discount Rate / COE (%)</label><input type="number" step="0.1" v-model.number="cfg.coe" class="input-field"></div>
@@ -229,14 +218,14 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
           <div class="rounded-2xl p-3 border border-slate-200" style="background:rgba(52,211,153,.06);">
-            <p class="text-xs font-bold text-slate-700 mb-2">🏭 Non-financial <span class="font-normal text-slate-400">(DCF 30%, PBV 20%, PE 35%, DDM 15%)</span></p>
+            <p class="text-xs font-bold text-slate-700 mb-2">🏭 Non-financial <span class="font-normal text-slate-400">(default DCF 30, PBV 20, PE 35, DDM 15)</span></p>
             <div class="method-grid">
               <div v-for="m in METHODS" :key="m.k"><label class="text-[10px] text-slate-400 block mb-1">{{ m.label }}</label><input type="number" min="0" v-model.number="cfg.wNon[m.k]" class="input-field method-input"></div>
             </div>
             <p class="text-[10px] text-slate-500 mt-2">Total: {{ wSum(cfg.wNon) }}%</p>
           </div>
           <div class="rounded-2xl p-3 border border-slate-200" style="background:rgba(251,191,36,.07);">
-            <p class="text-xs font-bold text-slate-700 mb-2">🏦 Financial (PE 35%, PBV 45%, DDM 20%)</p>
+            <p class="text-xs font-bold text-slate-700 mb-2">🏦 Financial <span class="font-normal text-slate-400">(default PE 35, PBV 45, DDM 20)</span></p>
             <div class="method-grid">
               <div v-for="m in METHODS" :key="m.k"><label class="text-[10px] text-slate-400 block mb-1">{{ m.label }}</label><input type="number" min="0" v-model.number="cfg.wFin[m.k]" class="input-field method-input"></div>
             </div>
@@ -248,22 +237,18 @@
           <button @click="saveWatch" class="btn-primary flex-1 btn-sm">💾 Simpan parameter</button>
           <button @click="resetCfg" class="btn-secondary flex-1 btn-sm">↩️ Default</button>
         </div>
-        <p class="text-[11px] text-slate-500 leading-relaxed">Bobot dinormalisasi otomatis jika ada data kosong. Sesuaikan dengan preferensi valuasi Anda — default sudah adjusted untuk pasar Indonesia saat ini.</p>
+        <p class="text-[11px] text-slate-500 leading-relaxed">Bobot dinormalisasi otomatis jika ada metode yang datanya kosong.</p>
       </div>
     </details>
 
-    <!-- BAGIAN 3: FORM TAMBAH/UBAH SAHAM (COLLAPSIBLE) -->
-    <details class="glass-card">
-      <summary class="p-4 font-bold text-slate-800 flex items-center justify-between cursor-pointer">
-        <span>{{ wEditing ? '✏️ Ubah: ' + wEditing : '➕ Tambah Saham Baru' }}</span>
-        <span class="text-xs text-slate-400">{{ details_form_open ? '▼' : '▶' }}</span>
-      </summary>
+    <details class="glass-card" :open="formOpen" @toggle="formOpen = $event.target.open">
+      <summary class="p-4 font-bold text-slate-800">{{ wEditing ? '✏️ Ubah: ' + wEditing : '➕ Tambah Saham Baru' }}</summary>
       <div class="px-4 pb-4 space-y-3">
         <form @submit.prevent="submitWatch" class="space-y-3">
-          
+
           <div class="section-header">Identitas Saham</div>
           <div class="grid gap-3" style="grid-template-columns:1fr 1fr">
-            <div><label class="text-xs text-slate-400 block mb-1">Kode IDX (format: IDX:BBCA)</label><input type="text" v-model="wf.kode" :disabled="!!wEditing" required maxlength="10" placeholder="IDX:BBCA" class="input-field uppercase"><p class="field-hint">Format: IDX:KODE (contoh: IDX:BBCA, IDX:UNVR, IDX:ASII)</p></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Kode saham</label><input type="text" v-model="wf.kode" :disabled="!!wEditing" required maxlength="12" placeholder="BBCA" class="input-field uppercase"><p class="field-hint">Cukup kode, contoh: BBCA, UNVR (otomatis dicari sebagai BBCA.JK)</p></div>
             <div><label class="text-xs text-slate-400 block mb-1">Nama Perusahaan</label><input type="text" v-model="wf.nama" placeholder="Bank Central Asia" class="input-field"></div>
           </div>
 
@@ -282,7 +267,7 @@
             </div>
             <div>
               <label class="text-xs text-slate-400 block mb-1">Dimiliki?</label>
-              <label class="flex items-center gap-2 mt-2"><input type="checkbox" v-model="wf.owned" class="w-4 h-4"> Ya, saya punya</label>
+              <label class="flex items-center gap-2 mt-2 text-sm"><input type="checkbox" v-model="wf.owned" class="w-4 h-4"> Ya, saya punya</label>
             </div>
           </div>
 
@@ -299,26 +284,22 @@
           </div>
 
           <div class="section-header">Metode Valuasi</div>
-          
-          <!-- PE Method -->
+
           <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
             <div class="flex items-center gap-2 mb-2"><span class="text-emerald-600 font-bold">PE</span><span class="text-xs text-slate-500">Price-to-Earnings</span></div>
             <div class="grid gap-2" style="grid-template-columns:1fr 1fr"><div><label class="text-xs text-slate-400">Target PE (x)</label><input type="number" step="any" v-model="wf.peTarget" placeholder="15-20" class="input-field"></div><div><label class="text-xs text-slate-400">Formula: EPS × PE</label></div></div>
           </div>
 
-          <!-- PBV Method -->
           <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
             <div class="flex items-center gap-2 mb-2"><span class="text-emerald-600 font-bold">PBV</span><span class="text-xs text-slate-500">Price-to-Book Value</span></div>
-            <div class="grid gap-2" style="grid-template-columns:1fr 1fr"><div><label class="text-xs text-slate-400">Target PBV (x)</label><input type="number" step="any" v-model="wf.pbvTarget" placeholder="kosong = auto" class="input-field"></div><div><label class="text-xs text-slate-400">Formula: BVPS × PBV</label></div></div>
+            <div class="grid gap-2" style="grid-template-columns:1fr 1fr"><div><label class="text-xs text-slate-400">Target PBV (x)</label><input type="number" step="any" v-model="wf.pbvTarget" placeholder="kosong = auto dari ROE" class="input-field"></div><div><label class="text-xs text-slate-400">Formula: BVPS × PBV</label></div></div>
           </div>
 
-          <!-- DDM Method -->
           <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
             <div class="flex items-center gap-2 mb-2"><span class="text-emerald-600 font-bold">DDM</span><span class="text-xs text-slate-500">Dividend Discount Model</span></div>
             <div class="grid gap-2" style="grid-template-columns:1fr 1fr"><div><label class="text-xs text-slate-400">Growth Dividen (%/th)</label><input type="number" step="any" v-model="wf.gDiv" placeholder="3-8" class="input-field"></div><div><label class="text-xs text-slate-400">Formula: DPS×(1+g)/(COE-g)</label></div></div>
           </div>
 
-          <!-- DCF Method (ONLY NON-FINANCIAL) -->
           <div v-if="wf.tipe==='non'" class="bg-orange-50 rounded-lg p-3 border border-orange-200">
             <div class="flex items-center gap-2 mb-2"><span class="text-orange-600 font-bold">DCF</span><span class="text-xs text-slate-500">Discounted Cash Flow (🏭 non-financial saja)</span></div>
             <div class="grid gap-2" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">
@@ -328,7 +309,7 @@
             </div>
           </div>
 
-          <div><label class="text-xs text-slate-400 block mb-1">Catatan</label><input type="text" v-model="wf.catatan" placeholder="Hold sampai ex-div date, atau tunggu Q2 2026" class="input-field"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Catatan</label><input type="text" v-model="wf.catatan" placeholder="Hold sampai ex-div date, atau tunggu Q2" class="input-field"></div>
 
           <div class="flex gap-2 pt-2">
             <button type="submit" class="btn-primary flex-1 btn-sm">{{ wEditing ? '💾 Simpan' : '➕ Tambah' }}</button>
@@ -338,7 +319,6 @@
       </div>
     </details>
 
-    <!-- BAGIAN 4: DAFTAR SAHAM DALAM TABEL -->
     <div v-if="analyzed.length" class="glass-card p-4 overflow-x-auto scrollbar-thin">
       <table class="watch-table">
         <thead>
@@ -364,7 +344,7 @@
             <td class="num text-emerald-700 font-semibold">{{ w.fair ? fmtRp(w.fair) : '—' }}</td>
             <td class="num" :class="pctColor(w.fair && w.price ? w.mos : null)"><span class="font-semibold">{{ w.fair && w.price ? fmtPct(w.mos) : '—' }}</span></td>
             <td><span class="status-badge" :class="'status-' + w.sinyal.toLowerCase().replace(' ','')">{{ w.sinyal }}</span></td>
-            <td class="text-center"><button @click="startEditWatch(w.kode)" class="text-emerald-600 text-[11px] underline mr-2">Ubah</button><button @click="deleteWatch(w.kode)" class="text-rose-600 text-[11px] underline">Hapus</button></td>
+            <td class="whitespace-nowrap"><button @click="startEditWatch(w.kode)" class="text-emerald-600 text-[11px] underline mr-2">Ubah</button><button @click="deleteWatch(w.kode)" class="text-rose-600 text-[11px] underline">Hapus</button></td>
           </tr>
         </tbody>
       </table>
@@ -387,14 +367,14 @@
     <div class="glass-card p-4">
       <h2 class="font-bold text-slate-800 mb-3">📋 Catatan Penting</h2>
       <div class="text-xs text-slate-600 space-y-2 leading-relaxed">
-        <p><strong>Update Metode Valuasi:</strong> Sesuaikan parameter valuasi setiap 3-6 bulan berdasarkan kondisi pasar Indonesia (PER rata-rata, interest rate, economic growth).</p>
-        <p><strong>Sumber Data:</strong> Harga dari Yahoo Finance (delay ~15 menit). Fundamental (EPS, DPS, ROE) dari laporan keuangan terbaru perusahaan.</p>
-        <p><strong>Default Parameters (Oct 2026):</strong> COE 13% (sesuai risk-free rate ~7% + risk premium 6%), MOS 30%, Bobot sudah disesuaikan untuk pasar Indonesia.</p>
+        <p><strong>Sumber harga:</strong> Yahoo Finance (kode IDX otomatis menjadi KODE.JK), delay sekitar 15 menit. Fundamental (EPS, BVPS, DPS, ROE) diisi manual dari laporan keuangan.</p>
+        <p><strong>Update metode valuasi:</strong> Sesuaikan COE, MOS, dan bobot setiap 3–6 bulan mengikuti kondisi pasar (BI rate, yield obligasi, PER rata-rata).</p>
+        <p><strong>Default (Okt 2026):</strong> COE 13%, MOS 30%.</p>
       </div>
     </div>
   </div>
 
-  <div class="text-center text-[11px] text-slate-500 mt-8 opacity-70">🚀 Tracking Saham v5.0 · Yahoo Finance · Dynamic Watchlist</div>
+  <div class="text-center text-[11px] text-slate-500 mt-8 opacity-70">🚀 Tracking Saham v6.0 · Harga: Yahoo Finance</div>
 
   <!-- MOBILE TAB BAR -->
   <div class="lg:hidden fixed bottom-0 inset-x-0 z-50 px-4 pb-4">
@@ -419,8 +399,7 @@ createApp({
       { id:'pengaturan', emoji:'⚙️', label:'Pengaturan' },
     ];
     const activeTab = ref('ringkasan');
-    const details_param_open = ref(true);
-    const details_form_open = ref(false);
+    const formOpen = ref(false);
 
     const rows = ref([]);
     const wl = ref([]);
@@ -428,6 +407,7 @@ createApp({
     const yearFilter = ref('all');
     const wEditing = ref(null);
     const wlStatus = ref('');
+    const refreshing = ref(false);
 
     const fDate = ref(''); const fDana = ref('0'); const fEquity = ref(''); const fDividen = ref('0'); const fIhsg = ref('');
     const scriptUrlInput = ref(localStorage.getItem('apps-script-url') || '');
@@ -435,24 +415,22 @@ createApp({
     const fmtRp = n => 'Rp' + Math.round(n).toLocaleString('id-ID');
     const fmtPct = n => (n===null||n===undefined||isNaN(n)) ? '—' : (n>=0?'+':'') + (n*100).toFixed(2) + '%';
     const fmtDate = s => new Date(s+'T00:00:00').toLocaleDateString('id-ID',{day:'2-digit',month:'short',year:'numeric'});
-    const fmtMonth = s => new Date(s+'T00:00:00').toLocaleDateString('id-ID',{month:'long',year:'numeric'});
     const pctColor = v => v===null||v===undefined ? 'text-slate-400' : (v>=0 ? 'text-emerald-600' : 'text-rose-600');
     const cagrColor = v => v===null||v===undefined ? 'text-slate-500' : (v>=0 ? 'text-emerald-600' : 'text-rose-600');
 
     const hasClaudeStorage = (typeof window.storage !== 'undefined');
 
-    // ========== WATCHLIST CONFIG & METHODS ==========
+    // ========== WATCHLIST CONFIG ==========
     const METHODS = [ {k:'dcf',label:'DCF'}, {k:'pbv',label:'PBV'}, {k:'pe',label:'PE'}, {k:'ddm',label:'DDM'} ];
     const NUM_FIELDS = ['avgBuy','price','eps','bvps','dps','roe','gDiv','peTarget','pbvTarget','fcfps','gFcf','gTerminal'];
-    
-    // DEFAULT CONFIG: Disesuaikan untuk pasar Indonesia Oct 2026
-    const defaultCfg = () => ({ 
-      coe: 13,  // Sesuai risk-free ~7% + risk premium 6%
-      mos: 30,  // Margin of Safety 30%
-      wNon: { dcf: 30, pbv: 20, pe: 35, ddm: 15 },   // Non-financial: DCF utama
-      wFin: { dcf: 0, pbv: 45, pe: 35, ddm: 20 }     // Financial: PBV & PE utama
+
+    const defaultCfg = () => ({
+      coe: 13,
+      mos: 30,
+      wNon: { dcf: 30, pbv: 20, pe: 35, ddm: 15 },
+      wFin: { dcf: 0, pbv: 45, pe: 35, ddm: 20 }
     });
-    
+
     const cfg = reactive(defaultCfg());
     function applyCfg(c){
       if(!c || typeof c!=='object') return;
@@ -464,6 +442,9 @@ createApp({
     function resetCfg(){ applyCfg(defaultCfg()); saveWatch(); }
     const wSum = o => METHODS.reduce((a,m)=>a+(Number(o[m.k])||0),0);
 
+    // Kode disimpan polos (BBCA). Data lama "IDX:BBCA" / "BBCA.JK" otomatis dinormalisasi.
+    const normKode = k => String(k||'').toUpperCase().trim().replace(/^IDX:/,'').replace(/\.JK$/,'');
+
     const emptyForm = () => ({ kode:'', nama:'', tipe:'non', owned:false, avgBuy:'', price:'', eps:'', bvps:'', dps:'', roe:'',
       gDiv:'5', peTarget:'', pbvTarget:'', fcfps:'', gFcf:'8', gTerminal:'3', catatan:'' });
     const wf = reactive(emptyForm());
@@ -474,15 +455,14 @@ createApp({
       return o;
     };
     const fromApiWatch = r => {
-      const o = { kode:String(r.kode||'').toUpperCase(), nama:String(r.nama||''), tipe:String(r.tipe)==='financial'?'financial':'non',
+      const o = { kode:normKode(r.kode), nama:String(r.nama||''), tipe:String(r.tipe)==='financial'?'financial':'non',
         owned:(r.owned===true||String(r.owned)==='1'||String(r.owned).toLowerCase()==='true'), catatan:String(r.catatan||''), updatedAt:String(r.updatedAt||'') };
       NUM_FIELDS.forEach(f=>{ o[f] = (r[f]===''||r[f]===null||r[f]===undefined) ? '' : String(r[f]); });
       return o;
     };
 
     // ========== GOOGLE SHEETS SYNC ==========
-    const DEFAULT_SCRIPT_URL = '';
-    const getScriptUrl = () => (DEFAULT_SCRIPT_URL || '').trim() || (localStorage.getItem('apps-script-url') || '').trim();
+    const getScriptUrl = () => (localStorage.getItem('apps-script-url') || '').trim();
     const setScriptUrl = url => localStorage.setItem('apps-script-url', url.trim());
     const syncStatus = reactive({ connected: !!getScriptUrl(), state:'idle', message:'' });
 
@@ -526,7 +506,7 @@ createApp({
       }
     }
     function loadWatchLocal(){
-      try{ const c = localStorage.getItem('watchlist-cache'); wl.value = c ? JSON.parse(c) : []; }catch(e){ wl.value = []; }
+      try{ const c = localStorage.getItem('watchlist-cache'); wl.value = c ? JSON.parse(c).map(w=>({...w, kode:normKode(w.kode)})) : []; }catch(e){ wl.value = []; }
       try{ const c = localStorage.getItem('watchlist-config'); if(c) applyCfg(JSON.parse(c)); }catch(e){}
     }
 
@@ -568,13 +548,14 @@ createApp({
           wlStatus.value = 'Watchlist tersimpan.';
         }catch(e){
           console.error(e);
-          wlStatus.value = 'Mode lokal (pastikan Apps Script sudah di-deploy ulang).';
+          wlStatus.value = 'Gagal menyimpan ke Google Sheets: ' + e.message + ' (tersimpan lokal).';
         }
       } else {
         wlStatus.value = 'Mode lokal — tersimpan di browser.';
       }
     }
 
+    // ========== UPDATE HARGA (YAHOO FINANCE via Apps Script) ==========
     async function refreshPrices(){
       if(!getScriptUrl()){
         syncStatus.state='error';
@@ -583,30 +564,29 @@ createApp({
         return;
       }
       if(!wl.value.length){ wlStatus.value = 'Watchlist masih kosong.'; return; }
-      wlStatus.value = 'Mengambil harga dari Google Finance… tunggu 10-30 detik.';
+      if(refreshing.value) return;
+      refreshing.value = true;
+      wlStatus.value = 'Mengambil harga dari Yahoo Finance…';
       try{
         const json = await postJson({action:'refreshPrices', kodes: wl.value.map(w=>w.kode)});
         if(!json.ok) throw new Error(json.error || 'Gagal mengambil harga');
-        let ok = 0; const now = new Date().toISOString();
-        
-        console.log('🔍 Prices fetched:', json.prices);
-        
-        // UPDATE HARGA - dengan proper Vue reactivity
-        wl.value.forEach((w, idx)=>{ 
-          const p = json.prices[w.kode]; 
-          console.log(`🔍 ${w.kode}: ${p}`);
-          if(p && isFinite(p) && p>0){ 
-            wl.value[idx] = { ...w, price: String(p), updatedAt: now };
-            ok++; 
-          } 
+        const prices = json.prices || {};
+        const now = new Date().toISOString();
+        let ok = 0;
+        wl.value = wl.value.map(w=>{
+          const p = Number(prices[w.kode]);
+          if(isFinite(p) && p>0){ ok++; return { ...w, price:String(p), updatedAt:now }; }
+          return w;
         });
-        
-        // SIMPAN ke Google Sheets
+        const failed = Array.isArray(json.failed) ? json.failed : [];
         await saveWatch();
-        wlStatus.value = 'Harga diperbarui untuk ' + ok + ' dari ' + wl.value.length + ' saham. ✅ Tersimpan ke Google Sheets.';
+        wlStatus.value = 'Harga diperbarui untuk ' + ok + ' dari ' + wl.value.length + ' saham.' +
+          (failed.length ? ' Gagal: ' + failed.join(', ') + ' (cek kode saham).' : '');
       }catch(e){
-        console.error('❌ Error:', e); 
-        wlStatus.value = 'Gagal update harga — pastikan Apps Script sudah di-deploy ulang dengan New version.';
+        console.error(e);
+        wlStatus.value = 'Gagal update harga: ' + e.message + ' — pastikan Apps Script sudah di-deploy dengan New version.';
+      }finally{
+        refreshing.value = false;
       }
     }
 
@@ -624,20 +604,16 @@ createApp({
       const gDiv = clamp(num(w.gDiv)/100, 0, gCap);
       const peT = num(w.peTarget), pbvT = num(w.pbvTarget);
 
-      // PE: earnings * target multiple
       const PE = (eps>0 && peT>0) ? eps*peT : 0;
-      
-      // PBV: book value * target PBV (atau auto-calculate dari ROE)
+
       let PBV = 0;
       if(bvps>0){
         if(pbvT>0) PBV = bvps*pbvT;
         else if(roe>0) PBV = bvps*clamp((roe/100 - gDiv)/(coe - gDiv), 0.5, 4);
       }
-      
-      // DDM: dividen model untuk dividend-paying stocks
+
       const DDM = dps>0 ? dps*(1+gDiv)/(coe-gDiv) : 0;
-      
-      // DCF: hanya untuk non-financial
+
       let DCF = 0;
       const fcf = num(w.fcfps);
       if(fcf>0 && !fin){
@@ -649,7 +625,6 @@ createApp({
         DCF = pv;
       }
 
-      // Weighted average fair value
       const vals = { dcf:DCF, pbv:PBV, pe:PE, ddm:DDM };
       const W = fin ? cfg.wFin : cfg.wNon;
       let tw = 0;
@@ -657,7 +632,6 @@ createApp({
       let fair = 0;
       if(tw>0) METHODS.forEach(m=>{ if(vals[m.k]>0) fair += vals[m.k]*Math.max(0,num(W[m.k]))/tw; });
 
-      // MOS dan sinyal
       const mosPct = clamp(num(cfg.mos), 0, 90)/100;
       const buyBelow = fair*(1-mosPct);
       const mos = (fair>0 && price>0) ? (fair-price)/fair : 0;
@@ -670,39 +644,31 @@ createApp({
       else if(price>=fair) sinyal = 'Mahal';
       else sinyal = 'Tunggu';
 
-      const methodRows = METHODS.map(m=>({ label:m.label, v:vals[m.k], eff:(vals[m.k]>0 && tw>0) ? Math.max(0,num(W[m.k]))/tw : 0 }));
-
-      return { ...w, fin, owned, price, avgBuy:num(w.avgBuy), fair, buyBelow, mos, sinyal, methodRows };
+      return { ...w, fin, owned, price, avgBuy:num(w.avgBuy), fair, buyBelow, mos, sinyal };
     }
 
     const SIG_ORDER = {'Jual':0, 'Beli':1, 'Hold':2, 'Tunggu':3, 'Mahal':4, 'Data kurang':5};
     const analyzed = computed(()=> wl.value.map(analyzeWatch));
     const cnt = s => analyzed.value.filter(w=>w.sinyal===s).length;
-    const shownList = computed(()=> analyzed.value.sort((a,b)=> (SIG_ORDER[a.sinyal]-SIG_ORDER[b.sinyal]) || (b.mos-a.mos)));
+    const shownList = computed(()=> [...analyzed.value].sort((a,b)=> (SIG_ORDER[a.sinyal]-SIG_ORDER[b.sinyal]) || (b.mos-a.mos)));
 
     function submitWatch(){
-      let kode = String(wf.kode||'').toUpperCase().trim();
+      const kode = normKode(wf.kode);
       if(!kode) return;
-      
-      // Normalize format: IDX:BBCA atau BBCA → IDX:BBCA
-      if(!kode.startsWith('IDX:')) {
-        kode = 'IDX:' + kode;
-      }
-      
       const item = { ...JSON.parse(JSON.stringify(wf)), kode, updatedAt:new Date().toISOString() };
       if(!item.owned) item.avgBuy = '';
       const idx = wl.value.findIndex(w=>w.kode===kode);
       if(idx>=0) wl.value[idx] = { ...wl.value[idx], ...item }; else wl.value.push(item);
-      wEditing.value = null; Object.assign(wf, emptyForm()); details_form_open.value = false;
+      wEditing.value = null; Object.assign(wf, emptyForm()); formOpen.value = false;
       saveWatch();
     }
     function startEditWatch(kode){
       const w = wl.value.find(x=>x.kode===kode); if(!w) return;
       wEditing.value = kode; Object.assign(wf, emptyForm(), JSON.parse(JSON.stringify(w)));
-      details_form_open.value = true;
+      formOpen.value = true;
       window.scrollTo({top:0, behavior:'smooth'});
     }
-    function cancelEditWatch(){ wEditing.value = null; Object.assign(wf, emptyForm()); details_form_open.value = false; }
+    function cancelEditWatch(){ wEditing.value = null; Object.assign(wf, emptyForm()); formOpen.value = false; }
     function deleteWatch(kode){
       if(!confirm('Hapus ' + kode + '?')) return;
       wl.value = wl.value.filter(w=>w.kode!==kode); saveWatch();
@@ -850,17 +816,17 @@ createApp({
     onMounted(()=>{ loadData(); });
 
     return {
-      tabs, activeTab, details_param_open, details_form_open,
+      tabs, activeTab, formOpen, refreshing,
       rows, editingId, yearFilter, wEditing, wlStatus,
       fDate, fDana, fEquity, fDividen, fIhsg, scriptUrlInput,
-      fmtRp, fmtPct, fmtDate, fmtMonth, pctColor, cagrColor,
+      fmtRp, fmtPct, fmtDate, pctColor, cagrColor,
       syncStatus, connectScript,
       computedRows, reversedComputedRows, lastRow, totalReturn, cagr, totalDividenAllTime,
       years, activeComputed, yearStats, prevYearStats, chartSvg, editingEntry,
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
       METHODS, cfg, wf, analyzed, shownList, cnt, wSum,
       submitWatch, startEditWatch, cancelEditWatch, deleteWatch, saveWatch, resetCfg, refreshPrices,
-      parseInt, Math
+      parseInt
     };
   }
 }).mount('#app');
