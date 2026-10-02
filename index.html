@@ -588,9 +588,20 @@ createApp({
         const json = await postJson({action:'refreshPrices', kodes: wl.value.map(w=>w.kode)});
         if(!json.ok) throw new Error(json.error || 'Gagal mengambil harga');
         let ok = 0; const now = new Date().toISOString();
-        wl.value.forEach(w=>{ const p = json.prices[w.kode]; if(p>0){ w.price = String(p); w.updatedAt = now; ok++; } });
+        
+        // UPDATE HARGA - dengan proper Vue reactivity
+        wl.value.forEach((w, idx)=>{ 
+          const p = json.prices[w.kode]; 
+          if(p>0){ 
+            // Trigger Vue reactivity dengan Object.assign (penting!)
+            wl.value[idx] = { ...w, price: String(p), updatedAt: now };
+            ok++; 
+          } 
+        });
+        
+        // SIMPAN ke Google Sheets
         await saveWatch();
-        wlStatus.value = 'Harga diperbarui untuk ' + ok + ' saham (Yahoo Finance delay ~15 menit).';
+        wlStatus.value = 'Harga diperbarui untuk ' + ok + ' saham (Yahoo Finance delay ~15 menit). ✅ Tersimpan ke Google Sheets.';
       }catch(e){
         console.error(e); wlStatus.value = 'Gagal update harga — pastikan Apps Script sudah di-deploy ulang dengan New version.';
       }
