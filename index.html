@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tracking Kinerja Saham</title>
+<title>Tracking Kinerja Saham - Dynamic Watchlist</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/vue@3.3.4/dist/vue.global.prod.js"></script>
 <style>
@@ -35,6 +35,10 @@
   .scrollbar-thin::-webkit-scrollbar-thumb{background:rgba(15,23,42,.15);border-radius:9999px}
   details>summary{cursor:pointer;list-style:none}
   details>summary::-webkit-details-marker{display:none}
+  .method-section{padding:1.25rem;margin-top:0.75rem;background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.15);border-radius:1rem}
+  .method-label{font-size:12px;font-weight:700;color:#0D9488;margin-bottom:.5rem;display:flex;align-items:center;gap:.5rem}
+  .field-hint{font-size:10px;color:#94A3B8;margin-top:.25rem;font-style:italic}
+  .section-header{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748B;margin-top:1.5rem;margin-bottom:.8rem;padding-top:.8rem;border-top:1px solid rgba(15,23,42,.08)}
 </style>
 </head>
 <body>
@@ -189,7 +193,7 @@
     </div>
   </div>
 
-  <!-- TAB: WATCHLIST (INPUT MANUAL + FAIR VALUE BERBOBOT) -->
+  <!-- TAB: WATCHLIST - DENGAN DYNAMIC FIELDS -->
   <div v-else-if="activeTab==='watchlist'" class="space-y-4">
 
     <div class="glass-card p-4">
@@ -232,56 +236,209 @@
       </div>
     </details>
 
-    <!-- FORM INPUT -->
+    <!-- FORM INPUT - DENGAN DYNAMIC FIELDS PER SEKTOR -->
     <div class="glass-card p-4">
       <h2 class="font-bold text-slate-800 mb-1">{{ wEditing ? '✏️ Ubah saham ' + wEditing : '➕ Tambah saham' }}</h2>
-      <p class="text-xs text-slate-400 mb-3">Isi data dari laporan keuangan / Stockbit. Metode yang datanya kosong otomatis dilewati.</p>
+      <p class="text-xs text-slate-400 mb-3">Field valuasi akan muncul sesuai sektor yang dipilih. Non-financial menampilkan semua, financial fokus ke PE/PBV/DDM.</p>
+      
       <form @submit.prevent="submitWatch" class="space-y-3">
-        <div class="flex gap-3">
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Kode saham</label><input type="text" v-model="wf.kode" :disabled="!!wEditing" required maxlength="6" placeholder="BBCA" class="input-field uppercase"></div>
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Nama (opsional)</label><input type="text" v-model="wf.nama" placeholder="Bank Central Asia" class="input-field"></div>
-        </div>
-        <div class="flex gap-3">
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Sektor</label>
-            <select v-model="wf.tipe" class="input-field"><option value="non">🏭 Non-financial</option><option value="financial">🏦 Financial</option></select></div>
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Harga saat ini (Rp)</label><input type="number" step="any" v-model="wf.price" placeholder="otomatis dari Google Finance" class="input-field"></div>
-        </div>
-        <div class="flex gap-3 items-end">
-          <label class="flex items-center gap-2 text-sm text-slate-700 flex-1 pb-2"><input type="checkbox" v-model="wf.owned" class="w-4 h-4"> 📦 Sudah saya miliki</label>
-          <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Harga beli rata-rata (Rp)</label><input type="number" step="any" v-model="wf.avgBuy" :disabled="!wf.owned" placeholder="0" class="input-field"></div>
+        
+        <!-- IDENTITAS SAHAM -->
+        <div>
+          <div class="section-header">🆔 Identitas Saham</div>
+          <div class="grid gap-3" style="grid-template-columns:1fr 1fr">
+            <div><label class="text-xs text-slate-400 block mb-1">Kode saham</label><input type="text" v-model="wf.kode" :disabled="!!wEditing" required maxlength="6" placeholder="BBCA" class="input-field uppercase"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Nama (opsional)</label><input type="text" v-model="wf.nama" placeholder="Bank Central Asia" class="input-field"></div>
+          </div>
         </div>
 
-        <p class="text-xs font-bold text-slate-600 pt-1">📘 Data dasar</p>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div><label class="text-xs text-slate-400 block mb-1">EPS (Rp/saham)</label><input type="number" step="any" v-model="wf.eps" class="input-field"></div>
-          <div><label class="text-xs text-slate-400 block mb-1">BVPS (Rp/saham)</label><input type="number" step="any" v-model="wf.bvps" class="input-field"></div>
-          <div><label class="text-xs text-slate-400 block mb-1">DPS (Rp/saham/thn)</label><input type="number" step="any" v-model="wf.dps" class="input-field"></div>
-          <div><label class="text-xs text-slate-400 block mb-1">ROE (%)</label><input type="number" step="any" v-model="wf.roe" class="input-field"></div>
+        <!-- SEKTOR & HARGA -->
+        <div>
+          <div class="section-header">⚙️ Sektor & Harga</div>
+          <div class="grid gap-3" style="grid-template-columns:1fr 1fr">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Sektor</label>
+              <select v-model="wf.tipe" class="input-field">
+                <option value="non">{{ sectorDesc.non }}</option>
+                <option value="financial">{{ sectorDesc.financial }}</option>
+              </select>
+              <p class="field-hint">{{ sectorDesc[wf.tipe] }}</p>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Harga saat ini (Rp)</label>
+              <input type="number" step="any" v-model="wf.price" placeholder="otomatis dari Google Finance" class="input-field">
+            </div>
+          </div>
         </div>
 
-        <p class="text-xs font-bold text-slate-600 pt-1">🧮 Asumsi per metode</p>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div><label class="text-xs text-slate-400 block mb-1">PE: target PE (x)</label><input type="number" step="any" v-model="wf.peTarget" placeholder="mean PE 5 th" class="input-field"></div>
-          <div><label class="text-xs text-slate-400 block mb-1">PBV: target PBV (x)</label><input type="number" step="any" v-model="wf.pbvTarget" placeholder="kosong = otomatis" class="input-field"></div>
-          <div><label class="text-xs text-slate-400 block mb-1">DDM: growth dividen (%)</label><input type="number" step="any" v-model="wf.gDiv" class="input-field"></div>
-          <div><label class="text-xs text-slate-400 block mb-1">DCF: FCF/saham (Rp)</label><input type="number" step="any" v-model="wf.fcfps" class="input-field"></div>
-          <div><label class="text-xs text-slate-400 block mb-1">DCF: growth FCF 5 th (%)</label><input type="number" step="any" v-model="wf.gFcf" class="input-field"></div>
-          <div><label class="text-xs text-slate-400 block mb-1">DCF: terminal growth (%)</label><input type="number" step="any" v-model="wf.gTerminal" class="input-field"></div>
+        <!-- STATUS KEPEMILIKAN -->
+        <div class="flex gap-4">
+          <label class="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" v-model="wf.owned" class="w-4 h-4"> 📦 Sudah saya miliki</label>
+          <div v-if="wf.owned" class="flex-1">
+            <label class="text-xs text-slate-400 block mb-1">Harga beli rata-rata (Rp)</label>
+            <input type="number" step="any" v-model="wf.avgBuy" placeholder="0" class="input-field">
+          </div>
         </div>
-        <div><label class="text-xs text-slate-400 block mb-1">📝 Catatan (opsional)</label><input type="text" v-model="wf.catatan" class="input-field"></div>
-        <div class="flex gap-2">
+
+        <!-- DATA FUNDAMENTAL -->
+        <div>
+          <div class="section-header">📊 Data Fundamental (dari laporan keuangan)</div>
+          <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit, minmax(140px, 1fr))">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">EPS (Rp/saham)</label>
+              <input type="number" step="any" v-model="wf.eps" class="input-field">
+              <p class="field-hint">Earning per share</p>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">BVPS (Rp/saham)</label>
+              <input type="number" step="any" v-model="wf.bvps" class="input-field">
+              <p class="field-hint">Book value per share</p>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">DPS (Rp/saham/thn)</label>
+              <input type="number" step="any" v-model="wf.dps" class="input-field">
+              <p class="field-hint">Dividend per share</p>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">ROE (%)</label>
+              <input type="number" step="any" v-model="wf.roe" class="input-field">
+              <p class="field-hint">Return on equity</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- DYNAMIC: PE METHOD (ALWAYS) -->
+        <div v-if="activeMetrics.pe">
+          <div class="method-section">
+            <div class="method-label">
+              <span class="text-emerald-600">✓</span>
+              <span>Price-to-Earnings (PE)</span>
+              <span v-if="wf.tipe==='financial'" class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded ml-auto">metode utama</span>
+              <span v-else class="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded ml-auto">metode pendukung</span>
+            </div>
+            <div class="grid gap-3" style="grid-template-columns:1fr 1fr">
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">Target PE (x)</label>
+                <input type="number" step="any" v-model="wf.peTarget" placeholder="cth: 15-20x" class="input-field">
+                <p class="field-hint">Rata-rata PE 5 tahun atau PE peer group</p>
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">Formula</label>
+                <div class="bg-slate-100 px-3 py-2 rounded text-xs text-slate-600 font-mono">Fair Value = EPS × PE</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DYNAMIC: PBV METHOD (ALWAYS) -->
+        <div v-if="activeMetrics.pbv">
+          <div class="method-section">
+            <div class="method-label">
+              <span class="text-emerald-600">✓</span>
+              <span>Price-to-Book Value (PBV)</span>
+              <span v-if="wf.tipe==='financial'" class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded ml-auto">metode utama</span>
+              <span v-else class="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded ml-auto">metode pendukung</span>
+            </div>
+            <div class="grid gap-3" style="grid-template-columns:1fr 1fr">
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">Target PBV (x) — opsional</label>
+                <input type="number" step="any" v-model="wf.pbvTarget" placeholder="kosong = otomatis dari ROE" class="input-field">
+                <p class="field-hint">Kosongkan untuk auto-calculate: (ROE − g) ÷ (COE − g), dibatasi 0.5–4x</p>
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">Formula</label>
+                <div class="bg-slate-100 px-3 py-2 rounded text-xs text-slate-600 font-mono">Fair Value = BVPS × PBV</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DYNAMIC: DDM METHOD (ALWAYS) -->
+        <div v-if="activeMetrics.ddm">
+          <div class="method-section">
+            <div class="method-label">
+              <span class="text-emerald-600">✓</span>
+              <span>Dividend Discount Model (DDM)</span>
+              <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded ml-auto">dividen stabil</span>
+            </div>
+            <div class="grid gap-3" style="grid-template-columns:1fr 1fr">
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">Growth dividen (%/tahun)</label>
+                <input type="number" step="any" v-model="wf.gDiv" placeholder="3-8%" class="input-field">
+                <p class="field-hint">Pertumbuhan dividen per tahun (jangan > COE)</p>
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">Formula</label>
+                <div class="bg-slate-100 px-3 py-2 rounded text-xs text-slate-600 font-mono">Fair = DPS×(1+g)÷(COE−g)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DYNAMIC: DCF METHOD (ONLY NON-FINANCIAL) -->
+        <div v-if="activeMetrics.dcf">
+          <div class="method-section" style="background:rgba(245,158,11,.05);border-color:rgba(245,158,11,.2)">
+            <div class="method-label">
+              <span class="text-orange-600">✓</span>
+              <span>Discounted Cash Flow (DCF)</span>
+              <span class="text-[10px] bg-orange-100 text-orange-700 px-2 py-1 rounded ml-auto">🏭 non-fin: utama</span>
+            </div>
+            <div class="bg-blue-50 border border-blue-200 rounded p-2 mb-3">
+              <p class="text-xs text-blue-800"><strong>ℹ️ DCF:</strong> Proyeksi FCF 5 tahun + terminal value (Gordon), diskon dengan COE</p>
+            </div>
+            <div class="grid gap-3" style="grid-template-columns:1fr 1fr 1fr">
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">FCF per saham (Rp)</label>
+                <input type="number" step="any" v-model="wf.fcfps" placeholder="dari laporan" class="input-field">
+                <p class="field-hint">Free cash flow ÷ saham beredar</p>
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">Growth FCF 5th (%/thn)</label>
+                <input type="number" step="any" v-model="wf.gFcf" placeholder="5-15%" class="input-field">
+                <p class="field-hint">Pertumbuhan FCF tahun 1–5</p>
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">Terminal growth (%/thn)</label>
+                <input type="number" step="any" v-model="wf.gTerminal" placeholder="2-4%" class="input-field">
+                <p class="field-hint">Growth selamanya setelah tahun 5</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- WARNING: DCF TIDAK UNTUK FINANCIAL -->
+        <div v-if="!activeMetrics.dcf" class="bg-slate-50 rounded-lg p-3 border border-slate-200">
+          <p class="text-xs text-slate-600">
+            <strong>ℹ️ DCF tidak dipakai untuk Financial:</strong> Bank & asuransi gunakan PE & PBV. DCF butuh proyeksi FCF detail yang kompleks dan kurang relevan untuk sektor ini.
+          </p>
+        </div>
+
+        <!-- CATATAN -->
+        <div>
+          <div class="section-header">📝 Catatan</div>
+          <input type="text" v-model="wf.catatan" placeholder="cth: hold sampai Q2 2026, atau tunggu ex-dividend date" class="input-field">
+        </div>
+
+        <!-- TOMBOL SUBMIT -->
+        <div class="flex gap-2 pt-2">
           <button type="submit" class="btn-primary flex-1">{{ wEditing ? '💾 Simpan perubahan' : '➕ Tambah ke watchlist' }}</button>
           <button v-if="wEditing" type="button" @click="cancelEditWatch" class="btn-secondary flex-1">Batal</button>
         </div>
       </form>
-      <ul class="text-[11px] text-slate-500 mt-3 space-y-1 leading-relaxed list-disc pl-4">
-        <li><b>DCF</b>: FCF/saham diproyeksi 5 tahun dengan growth FCF, lalu terminal value (Gordon), semuanya didiskon dengan COE. Untuk financial biasanya tidak relevan (bobot default 0%).</li>
-        <li><b>PBV</b>: BVPS × target PBV. Jika target kosong dipakai PBV wajar = (ROE − g) ÷ (COE − g), dibatasi 0,5–4×.</li>
-        <li><b>PE</b>: EPS × target PE (disarankan mean PE 5 tahun). <b>DDM</b>: DPS × (1+g) ÷ (COE − g).</li>
-      </ul>
+
+      <!-- LEGENDA METODE -->
+      <div class="mt-6 pt-6 border-t border-slate-200">
+        <p class="text-xs font-bold text-slate-600 mb-3">📖 Penjelasan singkat metode:</p>
+        <ul class="text-[11px] text-slate-600 space-y-1.5 leading-relaxed list-disc pl-4">
+          <li><b>PE</b>: EPS × target PE. Paling sederhana, cocok semua sektor.</li>
+          <li><b>PBV</b>: BVPS × target PBV. Berguna untuk financial & asset-heavy. Bisa auto-calculate dari ROE.</li>
+          <li><b>DDM</b>: DPS × (1+g) ÷ (COE−g). Untuk stock dividen tinggi & stabil.</li>
+          <li><b>DCF</b>: Proyeksi FCF 5 tahun + terminal value, diskon dengan COE. Paling detail, cocok untuk non-financial.</li>
+        </ul>
+      </div>
     </div>
 
-    <!-- DAFTAR -->
+    <!-- DAFTAR SAHAM -->
     <div class="flex gap-2 overflow-x-auto scrollbar-thin pb-1">
       <button v-for="f in filters" :key="f.id" @click="filterId=f.id" class="chip" :class="filterId===f.id ? 'chip-on' : ''">{{ f.label }}</button>
     </div>
@@ -372,8 +529,8 @@ const { createApp, ref, reactive, computed, onMounted } = Vue;
 
 createApp({
   setup(){
-    const APP_VERSION = '4.0';
-    const APP_BUILD = '2026-10-01';
+    const APP_VERSION = '4.1';
+    const APP_BUILD = '2026-10-02-DYNAMIC';
 
     const tabs = [
       { id:'ringkasan', emoji:'📊', label:'Ringkasan' },
@@ -402,6 +559,23 @@ createApp({
     const cagrColor = v => v===null||v===undefined ? 'text-slate-500' : (v>=0 ? 'text-emerald-600' : 'text-rose-600');
 
     const hasClaudeStorage = (typeof window.storage !== 'undefined');
+
+    // SEKTOR DESCRIPTION
+    const sectorDesc = {
+      'non': '🏭 Manufaktur, Consumer, Tech, Retail, E-commerce, Real Estate, Infrastruktur',
+      'financial': '🏦 Bank, Asuransi, Multifinance, Fintech, Sekuritas'
+    };
+
+    // COMPUTED: Active Metrics per Sektor
+    const activeMetrics = computed(() => {
+      const fin = wf.tipe === 'financial';
+      return {
+        pe: true,        // PE selalu aktif
+        pbv: true,       // PBV selalu aktif
+        ddm: true,       // DDM selalu aktif
+        dcf: !fin        // DCF HANYA untuk non-financial
+      };
+    });
 
     // ---------- Google Sheets (Apps Script) ----------
     const DEFAULT_SCRIPT_URL = '';
@@ -566,17 +740,13 @@ createApp({
       const gDiv = clamp(num(w.gDiv)/100, 0, gCap);
       const peT = num(w.peTarget), pbvT = num(w.pbvTarget);
 
-      // PE
       const PE = (eps>0 && peT>0) ? eps*peT : 0;
-      // PBV
       let PBV = 0;
       if(bvps>0){
         if(pbvT>0) PBV = bvps*pbvT;
         else if(roe>0) PBV = bvps*clamp((roe/100 - gDiv)/(coe - gDiv), 0.5, 4);
       }
-      // DDM
       const DDM = dps>0 ? dps*(1+gDiv)/(coe-gDiv) : 0;
-      // DCF (FCF per saham, 5 tahun + terminal value)
       let DCF = 0;
       const fcf = num(w.fcfps);
       if(fcf>0){
@@ -802,6 +972,7 @@ createApp({
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
       METHODS, cfg, wf, wEditing, wlStatus, analyzed, shownList, cnt, sigCls, sigIco, wSum,
       submitWatch, startEditWatch, cancelEditWatch, deleteWatch, saveWatch, resetCfg, refreshPrices,
+      activeMetrics, sectorDesc,
       parseInt, Math
     };
   }
