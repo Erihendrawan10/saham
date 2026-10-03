@@ -514,8 +514,14 @@
 
     <div class="glass-card p-4 overflow-x-auto scrollbar-thin">
       <h2 class="font-bold text-slate-800 mb-1">📒 Riwayat Transaksi</h2>
-      <p class="text-xs text-slate-400 mb-3">Total fee dibayar: {{ fmtRp(totalFee) }} · Realized gain/loss (setelah fee jual): <span :class="pctColor(totalRealized)">{{ fmtRpS(totalRealized) }}</span></p>
-      <table v-if="tradesShown.length" class="watch-table" style="min-width:760px;">
+      <p class="text-xs text-slate-400 mb-3">Tersimpan di sheet <strong>Transaksi</strong> pada spreadsheet Anda.</p>
+      <div class="flex items-end gap-2 mb-3 flex-wrap">
+        <div><label class="text-[11px] text-slate-400 block mb-1">Dari tanggal</label><input type="date" v-model="trxFrom" class="input-field" style="width:150px;"></div>
+        <div><label class="text-[11px] text-slate-400 block mb-1">Sampai tanggal</label><input type="date" v-model="trxTo" class="input-field" style="width:150px;"></div>
+        <button type="button" @click="resetTrxFilter" class="btn-secondary btn-sm">↩️ Reset filter</button>
+      </div>
+      <p class="text-xs text-slate-500 mb-3">{{ tradesShown.length }} dari {{ trades.length }} transaksi · Total fee: {{ fmtRp(totalFee) }} · Realized gain/loss (setelah fee jual): <span :class="pctColor(totalRealized)">{{ fmtRpS(totalRealized) }}</span></p>
+      <div v-if="tradesShown.length" style="max-height:26rem;overflow:auto;"><table class="watch-table" style="min-width:760px;">
         <thead><tr>
           <th>Tanggal</th><th>Jenis</th><th>Kode</th><th class="num">Lot</th><th class="num">Harga</th>
           <th class="num">Nilai</th><th class="num">Fee</th><th class="num">Dampak RDN</th><th class="num">Realized</th><th>Aksi</th>
@@ -534,8 +540,8 @@
             <td class="whitespace-nowrap"><button type="button" @click="deleteTrx(t.id)" class="text-rose-600 text-[11px] underline">Hapus</button></td>
           </tr>
         </tbody>
-      </table>
-      <p v-else class="text-center text-slate-500 text-sm py-4">Belum ada transaksi.</p>
+      </table></div>
+      <p v-else class="text-center text-slate-500 text-sm py-4">{{ trades.length ? 'Tidak ada transaksi pada rentang tanggal ini.' : 'Belum ada transaksi.' }}</p>
     </div>
   </div>
 
@@ -591,6 +597,8 @@ createApp({
 
     const rows = ref([]);
     const wl = ref([]);
+    const trades = ref([]);
+    const trxFrom = ref(''); const trxTo = ref('');
     const editingId = ref(null);
     const yearFilter = ref('all');
     const wEditing = ref(null);
@@ -633,7 +641,7 @@ createApp({
 
     // ========== ALOKASI CONFIG (disimpan di sheet Config, key "alokasi") ==========
     const nz = (v,d) => (v===undefined||v===null||v===''||isNaN(Number(v))) ? d : Number(v);
-    const defaultAlo = () => ({ rdn:0, dca:0, band:5, cashTarget:5, interval:6, lastRebalance:'', targets:{}, buyFee:0.15, sellFee:0.25, trades:[] });
+    const defaultAlo = () => ({ rdn:0, dca:0, band:5, cashTarget:5, interval:6, lastRebalance:'', targets:{}, buyFee:0.15, sellFee:0.25 });
     const alo = reactive(defaultAlo());
     function applyAlo(a){
       if(!a || typeof a!=='object') return;
@@ -645,7 +653,6 @@ createApp({
       alo.lastRebalance = String(a.lastRebalance||'');
       alo.buyFee = Math.max(0, nz(a.buyFee,0.15));
       alo.sellFee = Math.max(0, nz(a.sellFee,0.25));
-      alo.trades = Array.isArray(a.trades) ? a.trades.slice(-150).map(t=>({...t})) : [];
       const t = {};
       if(a.targets && typeof a.targets==='object') Object.keys(a.targets).forEach(k=>{ const v = nz(a.targets[k], null); if(v!==null) t[k] = v; });
       alo.targets = t;
@@ -670,6 +677,16 @@ createApp({
       return o;
     };
 
+    const toApiTrade = t => ({ id:String(t.id), tanggal:t.date, jenis:t.type, kode:t.kode, lot:t.lot, harga:t.harga, nilai:t.gross, fee:t.fee, dampakRdn:t.cash,
+      realized:(t.realized===null||t.realized===undefined) ? '' : t.realized });
+    const fromApiTrade = r => ({ id:String(r.id), date:String(r.tanggal).slice(0,10), type:String(r.jenis)==='jual'?'jual':'beli', kode:normKode(r.kode),
+      lot:Number(r.lot)||0, harga:Number(r.harga)||0, gross:Number(r.nilai)||0, fee:Number(r.fee)||0, cash:Number(r.dampakRdn)||0,
+      realized:(r.realized===''||r.realized===null||r.realized===undefined) ? null : Number(r.realized) });
+    function loadTradesLocal(){
+      try{ const c = localStorage.getItem('trades-cache'); if(c){ trades.value = JSON.parse(c); return; } }catch(e){}
+      try{ const c = JSON.parse(localStorage.getItem('alokasi-config')||'null'); trades.value = (c && Array.isArray(c.trades)) ? c.trades : []; }catch(e){ trades.value = []; }
+    }
+
     // ========== GOOGLE SHEETS SYNC ==========
     const getScriptUrl = () => (localStorage.getItem('apps-script-url') || '').trim();
     const setScriptUrl = url => localStorage.setItem('apps-script-url', url.trim());
@@ -689,6 +706,12 @@ createApp({
           wl.value = (json.watchlist||[]).map(fromApiWatch);
           if(json.config && json.config.params) applyCfg(json.config.params);
           if(json.config && json.config.alokasi) applyAlo(json.config.alokasi);
+          const legacy = (json.config && json.config.alokasi && Array.isArray(json.config.alokasi.trades)) ? json.config.alokasi.trades : [];
+          if(Array.isArray(json.transaksi) && json.transaksi.length) trades.value = json.transaksi.map(fromApiTrade);
+          else if(legacy.length) trades.value = legacy.map(t=>({...t}));
+          else if(Array.isArray(json.transaksi)) trades.value = [];
+          else loadTradesLocal();
+          localStorage.setItem('trades-cache', JSON.stringify(trades.value));
           localStorage.setItem('nav-tracker-data-cache', JSON.stringify(rows.value));
           localStorage.setItem('watchlist-cache', JSON.stringify(wl.value));
           localStorage.setItem('watchlist-config', JSON.stringify(cfg));
@@ -720,6 +743,7 @@ createApp({
       try{ const c = localStorage.getItem('watchlist-cache'); wl.value = c ? JSON.parse(c).map(w=>({...w, kode:normKode(w.kode)})) : []; }catch(e){ wl.value = []; }
       try{ const c = localStorage.getItem('watchlist-config'); if(c) applyCfg(JSON.parse(c)); }catch(e){}
       try{ const c = localStorage.getItem('alokasi-config'); if(c) applyAlo(JSON.parse(c)); }catch(e){}
+      loadTradesLocal();
     }
 
     async function postJson(payload){
@@ -751,13 +775,16 @@ createApp({
       localStorage.setItem('watchlist-cache', JSON.stringify(wl.value));
       localStorage.setItem('watchlist-config', JSON.stringify(cfg));
       localStorage.setItem('alokasi-config', JSON.stringify(alo));
+      localStorage.setItem('trades-cache', JSON.stringify(trades.value));
       if(getScriptUrl()){
         wlStatus.value = 'Menyimpan watchlist…';
         try{
           const json = await postJson({action:'saveWatchlist', rows: wl.value.map(toApiWatch),
-            config:{ params: JSON.parse(JSON.stringify(cfg)), alokasi: JSON.parse(JSON.stringify(alo)) }});
+            config:{ params: JSON.parse(JSON.stringify(cfg)), alokasi: JSON.parse(JSON.stringify(alo)) },
+            trades: trades.value.map(toApiTrade)});
           if(!json.ok) throw new Error(json.error || 'Gagal menyimpan');
           wl.value = (json.watchlist||[]).map(fromApiWatch);
+          if(Array.isArray(json.transaksi)){ trades.value = json.transaksi.map(fromApiTrade); localStorage.setItem('trades-cache', JSON.stringify(trades.value)); }
           localStorage.setItem('watchlist-cache', JSON.stringify(wl.value));
           wlStatus.value = 'Watchlist tersimpan.';
         }catch(e){
@@ -905,13 +932,16 @@ createApp({
       const cash = isBuy ? -(gross+fee) : gross-fee;
       return { gross, fee, cash, after: num(alo.rdn)+cash };
     });
-    const tradesShown = computed(()=> [...alo.trades].reverse().slice(0,30));
-    const totalFee = computed(()=> alo.trades.reduce((a,t)=>a+num(t.fee),0));
-    const totalRealized = computed(()=> alo.trades.reduce((a,t)=>a+(t.realized===null||t.realized===undefined ? 0 : num(t.realized)),0));
+    const tradesShown = computed(()=> trades.value
+      .filter(t=> (!trxFrom.value || t.date>=trxFrom.value) && (!trxTo.value || t.date<=trxTo.value))
+      .sort((a,b)=> b.date.localeCompare(a.date) || String(b.id).localeCompare(String(a.id))));
+    function resetTrxFilter(){ trxFrom.value = ''; trxTo.value = ''; }
+    const totalFee = computed(()=> tradesShown.value.reduce((a,t)=>a+num(t.fee),0));
+    const totalRealized = computed(()=> tradesShown.value.reduce((a,t)=>a+(t.realized===null||t.realized===undefined ? 0 : num(t.realized)),0));
     function deleteTrx(id){
-      const i = alo.trades.findIndex(t=>t.id===id);
+      const i = trades.value.findIndex(t=>t.id===id);
       if(i<0) return;
-      const t = alo.trades[i];
+      const t = trades.value[i];
       if(!confirm('Hapus catatan ' + (t.type==='beli' ? 'beli ' : 'jual ') + t.kode + ' ' + t.lot + ' lot dari riwayat?')) return;
       const reverse = confirm('Batalkan juga efeknya?\n\nOK = saldo RDN dan lot ' + t.kode + ' dikembalikan seperti sebelum transaksi ini.\nBatal = hanya hapus catatan, saldo dan lot tidak berubah.');
       let note = 'Catatan transaksi dihapus.';
@@ -943,7 +973,7 @@ createApp({
         if(!ok) note = 'Saldo RDN dikembalikan, tetapi lot ' + t.kode + ' tidak bisa dikembalikan otomatis (saham tidak ada atau lot tidak cukup) — periksa di Watchlist.';
         else if(note==='Catatan transaksi dihapus.') note = 'Catatan dihapus; saldo RDN dan lot dikembalikan.';
       }
-      alo.trades.splice(i,1);
+      trades.value.splice(i,1);
       wlStatus.value = note;
       saveWatch().then(()=>{ if(note!=='Catatan dihapus; saldo RDN dan lot dikembalikan.' && note!=='Catatan transaksi dihapus.') wlStatus.value = note; });
     }
@@ -1098,8 +1128,7 @@ createApp({
       upd.updatedAt = new Date().toISOString();
       wl.value[idx] = upd;
       alo.rdn = Math.max(0, Math.round((num(alo.rdn) + p.cash)*100)/100);
-      alo.trades.push({ id:'t_'+Date.now(), date:trx.date||todayStr(), type:trx.type, kode:w.kode, lot, harga, gross:p.gross, fee:p.fee, cash:p.cash, realized });
-      if(alo.trades.length>150) alo.trades.splice(0, alo.trades.length-150);
+      trades.value.push({ id:'t_'+Date.now(), date:trx.date||todayStr(), type:trx.type, kode:w.kode, lot, harga, gross:p.gross, fee:p.fee, cash:p.cash, realized });
       trx.lot = ''; trx.harga = '';
       saveWatch();
     }
@@ -1256,7 +1285,7 @@ createApp({
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
       METHODS, cfg, wf, analyzed, shownList, cnt, wSum,
       submitWatch, startEditWatch, cancelEditWatch, deleteWatch, saveWatch, resetCfg, refreshPrices,
-      alo, al, verdictColor, stClass, trx, trxMsg, trxOptions, trxPrev, tradesShown, totalFee, totalRealized, setTrxType, pickTrx, submitTrx, deleteTrx,
+      alo, al, verdictColor, stClass, trx, trxMsg, trxOptions, trxPrev, tradesShown, totalFee, totalRealized, setTrxType, pickTrx, submitTrx, deleteTrx, trades, trxFrom, trxTo, resetTrxFilter,
       cashAmt, ubahCash, setSaldo, setTarget, resetTargets, saveAlo, markRebalanced,
       parseInt
     };
