@@ -386,6 +386,17 @@
     <details open class="glass-card">
       <summary class="p-4 font-bold text-slate-800">⚙️ Parameter Alokasi & DCA</summary>
       <div class="px-4 pb-4 space-y-3">
+        <div class="rounded-2xl p-3 border border-slate-200" style="background:rgba(251,191,36,.08);">
+          <p class="text-xs font-bold text-slate-700 mb-1">💵 Saldo RDN / Cash: <span class="text-amber-700">{{ fmtRp(alo.rdn) }}</span></p>
+          <label class="text-[11px] text-slate-400 block mb-1">Nominal (Rp)</label>
+          <input type="number" min="0" v-model="cashAmt" placeholder="contoh: 2000000" class="input-field mb-2">
+          <div class="flex gap-2">
+            <button type="button" @click="ubahCash(1)" class="btn-primary flex-1 btn-sm">➕ Tambah (setor)</button>
+            <button type="button" @click="ubahCash(-1)" class="btn-secondary flex-1 btn-sm">➖ Kurangi (tarik)</button>
+            <button type="button" @click="setSaldo" class="btn-secondary flex-1 btn-sm">✏️ Set saldo = nominal</button>
+          </div>
+          <p class="text-[10px] text-slate-500 mt-2">Tambah/kurangi dari saldo sekarang, atau "Set saldo" untuk mengoreksi sesuai saldo di RDN. Pembelian DCA bisa mengurangi saldo otomatis lewat form Catat pembelian DCA.</p>
+        </div>
         <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
           <div><label class="text-xs text-slate-400 block mb-1">💵 DCA per bulan (Rp)</label><input type="number" min="0" v-model.number="alo.dca" class="input-field"></div>
           <div><label class="text-xs text-slate-400 block mb-1">🎯 Target cash RDN (%)</label><input type="number" min="0" max="100" step="0.5" v-model.number="alo.cashTarget" class="input-field"></div>
@@ -427,14 +438,14 @@
             <td class="num text-slate-400">—</td>
             <td class="num text-slate-400">—</td>
             <td class="num text-slate-400">—</td>
-            <td class="num"><input type="number" min="0" :value="alo.rdn" @change="setRdn($event.target.value)" class="input-field mini-input" style="width:140px;" placeholder="0"></td>
+            <td class="num font-semibold text-slate-700">{{ fmtRp(alo.rdn) }}</td>
             <td class="num text-slate-400">—</td>
             <td class="num text-slate-400">—</td>
             <td class="num font-semibold">{{ al.cashPct.toFixed(1) }}%</td>
             <td class="num text-slate-600">{{ num(alo.cashTarget).toFixed(1) }}%</td>
             <td class="num font-semibold" :class="al.cashDrift>=0 ? 'text-amber-600' : 'text-slate-600'">{{ (al.cashDrift>=0?'+':'') + al.cashDrift.toFixed(1) }}</td>
-            <td class="text-[11px] text-slate-500">Saldo tersimpan di spreadsheet</td>
-            <td class="num text-slate-600">{{ alo.dca>0 && num(alo.rdn)<alo.dca ? '⚠️ cash < DCA' : '—' }}</td>
+            <td class="text-[11px] text-slate-500">Ubah saldo di Parameter</td>
+            <td class="num text-slate-600">{{ al.cashShort ? '⚠️ cash kurang dari DCA' : '—' }}</td>
           </tr>
           <tr v-for="r in al.list" :key="r.kode">
             <td class="code">{{ r.kode }} <span class="text-[10px] font-normal text-slate-400">{{ r.sinyal }}</span></td>
@@ -931,7 +942,8 @@ createApp({
       if(n && alo.dca>0 && rdn<alo.dca) verdict.lines.push('Saldo RDN (' + fmtRp(rdn) + ') lebih kecil dari rencana DCA bulanan (' + fmtRp(alo.dca) + ').');
       if(n && Math.abs(targetSum-100)>0.05) verdict.lines.push('Total target = ' + targetSum.toFixed(1) + '% (idealnya 100% termasuk cash).');
 
-      return { list, total, totalSaham, totalModal, totalGl, totalGlPct, cashPct, cashDrift, targetSum, dcaTotal, nextDate, daysLeft, due, verdict };
+      const cashShort = dca>0 && rdn<dca;
+      return { cashShort, list, total, totalSaham, totalModal, totalGl, totalGlPct, cashPct, cashDrift, targetSum, dcaTotal, nextDate, daysLeft, due, verdict };
     });
 
     const verdictColor = computed(()=>{
@@ -941,7 +953,19 @@ createApp({
       return { border:'rgba(16,185,129,.35)', bg:'rgba(16,185,129,.07)' };
     });
 
-    function setRdn(v){ alo.rdn = Math.max(0, parseFloat(v)||0); saveWatch(); }
+    const cashAmt = ref('');
+    function ubahCash(sign){
+      const v = parseFloat(cashAmt.value);
+      if(!(v>0)) return;
+      if(sign<0 && v>num(alo.rdn)){ wlStatus.value = 'Pengurangan melebihi saldo RDN.'; return; }
+      alo.rdn = Math.max(0, num(alo.rdn) + sign*v);
+      cashAmt.value = ''; saveWatch();
+    }
+    function setSaldo(){
+      const v = parseFloat(cashAmt.value);
+      if(!(v>=0)) return;
+      alo.rdn = v; cashAmt.value = ''; saveWatch();
+    }
     function setTarget(kode, v){
       if(v===''||v===null||isNaN(Number(v))) delete alo.targets[kode]; else alo.targets[kode] = Math.max(0, Number(v));
       saveWatch();
@@ -1116,7 +1140,7 @@ createApp({
       METHODS, cfg, wf, analyzed, shownList, cnt, wSum,
       submitWatch, startEditWatch, cancelEditWatch, deleteWatch, saveWatch, resetCfg, refreshPrices,
       alo, al, verdictColor, stClass, dcaKode, dcaLot, dcaHarga, dcaPotong,
-      setRdn, setTarget, resetTargets, saveAlo, markRebalanced, catatDca,
+      cashAmt, ubahCash, setSaldo, setTarget, resetTargets, saveAlo, markRebalanced, catatDca,
       parseInt
     };
   }
