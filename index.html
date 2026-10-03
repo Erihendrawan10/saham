@@ -276,7 +276,7 @@
 
           <div v-if="wf.owned" class="flex gap-3">
             <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Harga Beli Rata-rata (Rp)</label><input type="number" step="any" v-model="wf.avgBuy" placeholder="0" class="input-field"></div>
-            <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Jumlah Lot dimiliki</label><input type="number" step="any" min="0" v-model="wf.lot" placeholder="0" class="input-field"><p class="field-hint">1 lot = 100 lembar. Dipakai di tab Alokasi (bisa diperbarui lewat "Catat pembelian DCA").</p></div>
+            <div class="flex-1"><label class="text-xs text-slate-400 block mb-1">Jumlah Lot dimiliki</label><input type="number" step="any" min="0" v-model="wf.lot" placeholder="0" class="input-field"><p class="field-hint">1 lot = 100 lembar. Dipakai di tab Alokasi (otomatis berubah lewat Transaksi Beli/Jual).</p></div>
           </div>
 
           <div class="section-header">Data Fundamental</div>
@@ -395,13 +395,15 @@
             <button type="button" @click="ubahCash(-1)" class="btn-secondary flex-1 btn-sm">➖ Kurangi (tarik)</button>
             <button type="button" @click="setSaldo" class="btn-secondary flex-1 btn-sm">✏️ Set saldo = nominal</button>
           </div>
-          <p class="text-[10px] text-slate-500 mt-2">Tambah/kurangi dari saldo sekarang, atau "Set saldo" untuk mengoreksi sesuai saldo di RDN. Pembelian DCA bisa mengurangi saldo otomatis lewat form Catat pembelian DCA.</p>
+          <p class="text-[10px] text-slate-500 mt-2">Tambah/kurangi dari saldo sekarang, atau "Set saldo" untuk mengoreksi sesuai saldo di RDN. Transaksi beli/jual di bawah otomatis mengubah saldo (setelah fee).</p>
         </div>
         <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">
           <div><label class="text-xs text-slate-400 block mb-1">💵 DCA per bulan (Rp)</label><input type="number" min="0" v-model.number="alo.dca" class="input-field"></div>
           <div><label class="text-xs text-slate-400 block mb-1">🎯 Target cash RDN (%)</label><input type="number" min="0" max="100" step="0.5" v-model.number="alo.cashTarget" class="input-field"></div>
           <div><label class="text-xs text-slate-400 block mb-1">↔️ Batas selisih (poin %)</label><input type="number" min="0" step="0.5" v-model.number="alo.band" class="input-field"></div>
           <div><label class="text-xs text-slate-400 block mb-1">🗓️ Review tiap (bulan)</label><input type="number" min="1" step="1" v-model.number="alo.interval" class="input-field"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">🧾 Fee beli (%)</label><input type="number" min="0" step="0.01" v-model.number="alo.buyFee" class="input-field"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">🧾 Fee jual (%)</label><input type="number" min="0" step="0.01" v-model.number="alo.sellFee" class="input-field"></div>
         </div>
         <div class="flex gap-2">
           <button @click="saveAlo" class="btn-primary flex-1 btn-sm">💾 Simpan parameter</button>
@@ -485,18 +487,54 @@
     </div>
 
     <div class="glass-card p-4">
-      <h2 class="font-bold text-slate-800 mb-1">🧾 Catat pembelian DCA</h2>
-      <p class="text-xs text-slate-400 mb-3">Harga beli rata-rata dan jumlah lot dihitung ulang otomatis (rata-rata tertimbang).</p>
-      <form @submit.prevent="catatDca" class="space-y-3">
-        <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
-          <div><label class="text-xs text-slate-400 block mb-1">Saham</label>
-            <select v-model="dcaKode" required class="input-field"><option value="" disabled>Pilih…</option><option v-for="w in wl" :key="w.kode" :value="w.kode">{{ w.kode }}</option></select></div>
-          <div><label class="text-xs text-slate-400 block mb-1">Lot dibeli</label><input type="number" step="any" min="0" v-model="dcaLot" required class="input-field"></div>
-          <div><label class="text-xs text-slate-400 block mb-1">Harga beli (Rp/lembar)</label><input type="number" step="any" min="0" v-model="dcaHarga" required class="input-field"></div>
+      <h2 class="font-bold text-slate-800 mb-1">🛒 Transaksi Beli / Jual</h2>
+      <p class="text-xs text-slate-400 mb-3">Beli: saldo RDN berkurang sebesar nilai + fee beli ({{ alo.buyFee }}%). Jual: saldo RDN bertambah sebesar nilai − fee jual ({{ alo.sellFee }}%). Harga beli rata-rata dan lot diperbarui otomatis.</p>
+      <form @submit.prevent="submitTrx" class="space-y-3">
+        <div class="flex gap-2">
+          <button type="button" @click="setTrxType('beli')" class="flex-1 btn-sm" :class="trx.type==='beli' ? 'btn-primary' : 'btn-secondary'">🟢 Beli</button>
+          <button type="button" @click="setTrxType('jual')" class="flex-1 btn-sm" :class="trx.type==='jual' ? 'btn-primary' : 'btn-secondary'">🔴 Jual</button>
         </div>
-        <label class="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" v-model="dcaPotong" class="w-4 h-4"> Kurangi saldo RDN sebesar nilai pembelian</label>
-        <button type="submit" class="btn-primary w-full btn-sm">➕ Catat pembelian</button>
+        <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+          <div><label class="text-xs text-slate-400 block mb-1">Tanggal</label><input type="date" v-model="trx.date" required class="input-field"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Saham</label>
+            <select v-model="trx.kode" @change="pickTrx" required class="input-field"><option value="" disabled>Pilih…</option><option v-for="w in trxOptions" :key="w.kode" :value="w.kode">{{ w.kode }}</option></select></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Lot</label><input type="number" step="any" min="0" v-model="trx.lot" required class="input-field"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Harga (Rp/lembar)</label><input type="number" step="any" min="0" v-model="trx.harga" required class="input-field"></div>
+        </div>
+        <div v-if="trxPrev" class="rounded-2xl p-3 border border-slate-200 text-xs space-y-1" style="background:rgba(15,23,42,.03);">
+          <div class="flex justify-between"><span class="text-slate-400">Nilai transaksi</span><span class="font-semibold text-slate-700">{{ fmtRp(trxPrev.gross) }}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Fee {{ trx.type==='beli' ? 'beli' : 'jual' }}</span><span class="font-semibold text-slate-700">{{ fmtRp(trxPrev.fee) }}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">{{ trx.type==='beli' ? 'Total dikurangi dari RDN' : 'Bersih masuk ke RDN' }}</span><span class="font-semibold" :class="trx.type==='beli' ? 'text-rose-600' : 'text-emerald-600'">{{ fmtRp(Math.abs(trxPrev.cash)) }}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Saldo RDN setelah transaksi</span><span class="font-semibold text-slate-700">{{ fmtRp(trxPrev.after) }}</span></div>
+        </div>
+        <p v-if="trxMsg" class="text-xs text-rose-600">{{ trxMsg }}</p>
+        <button type="submit" class="btn-primary w-full btn-sm">{{ trx.type==='beli' ? '➕ Catat pembelian' : '➖ Catat penjualan' }}</button>
       </form>
+    </div>
+
+    <div class="glass-card p-4 overflow-x-auto scrollbar-thin">
+      <h2 class="font-bold text-slate-800 mb-1">📒 Riwayat Transaksi</h2>
+      <p class="text-xs text-slate-400 mb-3">Total fee dibayar: {{ fmtRp(totalFee) }} · Realized gain/loss (setelah fee jual): <span :class="pctColor(totalRealized)">{{ fmtRpS(totalRealized) }}</span></p>
+      <table v-if="tradesShown.length" class="watch-table" style="min-width:760px;">
+        <thead><tr>
+          <th>Tanggal</th><th>Jenis</th><th>Kode</th><th class="num">Lot</th><th class="num">Harga</th>
+          <th class="num">Nilai</th><th class="num">Fee</th><th class="num">Dampak RDN</th><th class="num">Realized</th>
+        </tr></thead>
+        <tbody>
+          <tr v-for="t in tradesShown" :key="t.id">
+            <td class="text-slate-600">{{ fmtDate(t.date) }}</td>
+            <td><span class="status-badge" :class="t.type==='beli' ? 'status-beli' : 'status-jual'">{{ t.type==='beli' ? 'Beli' : 'Jual' }}</span></td>
+            <td class="code">{{ t.kode }}</td>
+            <td class="num text-slate-600">{{ t.lot }}</td>
+            <td class="num text-slate-600">{{ fmtRp(t.harga) }}</td>
+            <td class="num text-slate-600">{{ fmtRp(t.gross) }}</td>
+            <td class="num text-slate-600">{{ fmtRp(t.fee) }}</td>
+            <td class="num font-semibold" :class="pctColor(t.cash)">{{ fmtRpS(t.cash) }}</td>
+            <td class="num font-semibold" :class="pctColor(t.realized)">{{ t.realized===null || t.realized===undefined ? '—' : fmtRpS(t.realized) }}</td>
+          </tr>
+        </tbody>
+      </table>
+      <p v-else class="text-center text-slate-500 text-sm py-4">Belum ada transaksi.</p>
     </div>
   </div>
 
@@ -594,7 +632,7 @@ createApp({
 
     // ========== ALOKASI CONFIG (disimpan di sheet Config, key "alokasi") ==========
     const nz = (v,d) => (v===undefined||v===null||v===''||isNaN(Number(v))) ? d : Number(v);
-    const defaultAlo = () => ({ rdn:0, dca:0, band:5, cashTarget:5, interval:6, lastRebalance:'', targets:{} });
+    const defaultAlo = () => ({ rdn:0, dca:0, band:5, cashTarget:5, interval:6, lastRebalance:'', targets:{}, buyFee:0.15, sellFee:0.25, trades:[] });
     const alo = reactive(defaultAlo());
     function applyAlo(a){
       if(!a || typeof a!=='object') return;
@@ -604,6 +642,9 @@ createApp({
       alo.cashTarget = Math.min(100, Math.max(0, nz(a.cashTarget,5)));
       alo.interval = Math.max(1, nz(a.interval,6));
       alo.lastRebalance = String(a.lastRebalance||'');
+      alo.buyFee = Math.max(0, nz(a.buyFee,0.15));
+      alo.sellFee = Math.max(0, nz(a.sellFee,0.25));
+      alo.trades = Array.isArray(a.trades) ? a.trades.slice(-150).map(t=>({...t})) : [];
       const t = {};
       if(a.targets && typeof a.targets==='object') Object.keys(a.targets).forEach(k=>{ const v = nz(a.targets[k], null); if(v!==null) t[k] = v; });
       alo.targets = t;
@@ -847,9 +888,30 @@ createApp({
     }
 
     // ========== ALOKASI ENGINE ==========
-    const dcaKode = ref(''); const dcaLot = ref(''); const dcaHarga = ref(''); const dcaPotong = ref(true);
     const todayStr = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
     const stClass = s => s==='Overweight' ? 'status-mahal' : (s==='Underweight' ? 'status-tunggu' : 'status-beli');
+
+    // ===== Transaksi beli/jual =====
+    const trx = reactive({ type:'beli', date:todayStr(), kode:'', lot:'', harga:'' });
+    const trxMsg = ref('');
+    const trxOptions = computed(()=> trx.type==='jual' ? wl.value.filter(w=>w.owned && num(w.lot)>0) : wl.value);
+    const trxPrev = computed(()=>{
+      const lot = parseFloat(trx.lot), harga = parseFloat(trx.harga);
+      if(!(lot>0) || !(harga>0)) return null;
+      const gross = lot*100*harga;
+      const isBuy = trx.type==='beli';
+      const fee = gross*Math.max(0, num(isBuy ? alo.buyFee : alo.sellFee))/100;
+      const cash = isBuy ? -(gross+fee) : gross-fee;
+      return { gross, fee, cash, after: num(alo.rdn)+cash };
+    });
+    const tradesShown = computed(()=> [...alo.trades].reverse().slice(0,30));
+    const totalFee = computed(()=> alo.trades.reduce((a,t)=>a+num(t.fee),0));
+    const totalRealized = computed(()=> alo.trades.reduce((a,t)=>a+(t.realized===null||t.realized===undefined ? 0 : num(t.realized)),0));
+    function setTrxType(t){ trx.type = t; trx.kode = ''; trx.harga = ''; trxMsg.value = ''; }
+    function pickTrx(){
+      const w = wl.value.find(x=>x.kode===trx.kode);
+      if(w && num(w.price)>0) trx.harga = String(num(w.price));
+    }
 
     const al = computed(()=>{
       const hs = analyzed.value.filter(w=>w.owned && num(w.lot)>0);
@@ -973,17 +1035,32 @@ createApp({
     function resetTargets(){ alo.targets = {}; saveWatch(); }
     function saveAlo(){ saveWatch(); }
     function markRebalanced(){ alo.lastRebalance = todayStr(); saveWatch(); }
-    function catatDca(){
-      const idx = wl.value.findIndex(x=>x.kode===dcaKode.value);
-      const lot = parseFloat(dcaLot.value), harga = parseFloat(dcaHarga.value);
-      if(idx<0 || !(lot>0) || !(harga>0)) return;
+    function submitTrx(){
+      trxMsg.value = '';
+      const idx = wl.value.findIndex(x=>x.kode===trx.kode);
+      const p = trxPrev.value;
+      if(idx<0 || !p){ trxMsg.value = 'Lengkapi saham, lot, dan harga.'; return; }
       const w = wl.value[idx];
+      const lot = parseFloat(trx.lot), harga = parseFloat(trx.harga);
       const oldLot = num(w.lot), oldAvg = num(w.avgBuy);
-      const newLot = oldLot + lot;
-      const newAvg = Math.round(((oldLot*oldAvg + lot*harga)/newLot)*100)/100;
-      wl.value[idx] = { ...w, owned:true, lot:String(newLot), avgBuy:String(newAvg), updatedAt:new Date().toISOString() };
-      if(dcaPotong.value) alo.rdn = Math.max(0, num(alo.rdn) - lot*100*harga);
-      dcaLot.value = ''; dcaHarga.value = '';
+      let realized = null, upd;
+      if(trx.type==='beli'){
+        if(p.after<0){ trxMsg.value = 'Saldo RDN tidak cukup. Butuh ' + fmtRp(-p.cash) + ', saldo ' + fmtRp(alo.rdn) + '.'; return; }
+        const newLot = oldLot + lot;
+        const newAvg = Math.round(((oldLot*oldAvg + lot*harga)/newLot)*100)/100;
+        upd = { ...w, owned:true, lot:String(newLot), avgBuy:String(newAvg) };
+      } else {
+        if(lot>oldLot){ trxMsg.value = 'Lot jual (' + lot + ') melebihi lot dimiliki (' + oldLot + ').'; return; }
+        realized = p.cash - oldAvg*lot*100;
+        const newLot = oldLot - lot;
+        upd = newLot>0 ? { ...w, lot:String(newLot) } : { ...w, owned:false, lot:'', avgBuy:'' };
+      }
+      upd.updatedAt = new Date().toISOString();
+      wl.value[idx] = upd;
+      alo.rdn = Math.max(0, Math.round((num(alo.rdn) + p.cash)*100)/100);
+      alo.trades.push({ id:'t_'+Date.now(), date:trx.date||todayStr(), type:trx.type, kode:w.kode, lot, harga, gross:p.gross, fee:p.fee, cash:p.cash, realized });
+      if(alo.trades.length>150) alo.trades.splice(0, alo.trades.length-150);
+      trx.lot = ''; trx.harga = '';
       saveWatch();
     }
 
@@ -1139,8 +1216,8 @@ createApp({
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
       METHODS, cfg, wf, analyzed, shownList, cnt, wSum,
       submitWatch, startEditWatch, cancelEditWatch, deleteWatch, saveWatch, resetCfg, refreshPrices,
-      alo, al, verdictColor, stClass, dcaKode, dcaLot, dcaHarga, dcaPotong,
-      cashAmt, ubahCash, setSaldo, setTarget, resetTargets, saveAlo, markRebalanced, catatDca,
+      alo, al, verdictColor, stClass, trx, trxMsg, trxOptions, trxPrev, tradesShown, totalFee, totalRealized, setTrxType, pickTrx, submitTrx,
+      cashAmt, ubahCash, setSaldo, setTarget, resetTargets, saveAlo, markRebalanced,
       parseInt
     };
   }
