@@ -211,7 +211,7 @@
       <p class="text-[11px] text-slate-500 mt-2">{{ wlStatus }}</p>
     </div>
 
-    <details open class="glass-card">
+    <details class="glass-card">
       <summary class="p-4 font-bold text-slate-800">⚙️ Parameter & Bobot Metode</summary>
       <div class="px-4 pb-4 space-y-4">
         <div class="flex gap-3">
@@ -383,7 +383,7 @@
       </div>
     </div>
 
-    <details open class="glass-card">
+    <details class="glass-card">
       <summary class="p-4 font-bold text-slate-800">⚙️ Parameter Alokasi & DCA</summary>
       <div class="px-4 pb-4 space-y-3">
         <div class="rounded-2xl p-3 border border-slate-200" style="background:rgba(251,191,36,.08);">
@@ -518,7 +518,7 @@
       <table v-if="tradesShown.length" class="watch-table" style="min-width:760px;">
         <thead><tr>
           <th>Tanggal</th><th>Jenis</th><th>Kode</th><th class="num">Lot</th><th class="num">Harga</th>
-          <th class="num">Nilai</th><th class="num">Fee</th><th class="num">Dampak RDN</th><th class="num">Realized</th>
+          <th class="num">Nilai</th><th class="num">Fee</th><th class="num">Dampak RDN</th><th class="num">Realized</th><th>Aksi</th>
         </tr></thead>
         <tbody>
           <tr v-for="t in tradesShown" :key="t.id">
@@ -531,6 +531,7 @@
             <td class="num text-slate-600">{{ fmtRp(t.fee) }}</td>
             <td class="num font-semibold" :class="pctColor(t.cash)">{{ fmtRpS(t.cash) }}</td>
             <td class="num font-semibold" :class="pctColor(t.realized)">{{ t.realized===null || t.realized===undefined ? '—' : fmtRpS(t.realized) }}</td>
+            <td class="whitespace-nowrap"><button type="button" @click="deleteTrx(t.id)" class="text-rose-600 text-[11px] underline">Hapus</button></td>
           </tr>
         </tbody>
       </table>
@@ -907,6 +908,45 @@ createApp({
     const tradesShown = computed(()=> [...alo.trades].reverse().slice(0,30));
     const totalFee = computed(()=> alo.trades.reduce((a,t)=>a+num(t.fee),0));
     const totalRealized = computed(()=> alo.trades.reduce((a,t)=>a+(t.realized===null||t.realized===undefined ? 0 : num(t.realized)),0));
+    function deleteTrx(id){
+      const i = alo.trades.findIndex(t=>t.id===id);
+      if(i<0) return;
+      const t = alo.trades[i];
+      if(!confirm('Hapus catatan ' + (t.type==='beli' ? 'beli ' : 'jual ') + t.kode + ' ' + t.lot + ' lot dari riwayat?')) return;
+      const reverse = confirm('Batalkan juga efeknya?\n\nOK = saldo RDN dan lot ' + t.kode + ' dikembalikan seperti sebelum transaksi ini.\nBatal = hanya hapus catatan, saldo dan lot tidak berubah.');
+      let note = 'Catatan transaksi dihapus.';
+      if(reverse){
+        const idx = wl.value.findIndex(x=>x.kode===t.kode);
+        const w = idx>=0 ? wl.value[idx] : null;
+        const lot = num(t.lot), oldLot = w ? num(w.lot) : 0, oldAvg = w ? num(w.avgBuy) : 0;
+        let upd = null, ok = true;
+        if(t.type==='beli'){
+          if(w && oldLot>=lot){
+            const newLot = oldLot - lot;
+            if(newLot>0){
+              const a = (oldLot*oldAvg - lot*num(t.harga))/newLot;
+              upd = { ...w, lot:String(newLot), avgBuy:String(Math.round((a>0 ? a : oldAvg)*100)/100) };
+            } else upd = { ...w, owned:false, lot:'', avgBuy:'' };
+          } else ok = false;
+          alo.rdn = Math.max(0, Math.round((num(alo.rdn) - num(t.cash))*100)/100);
+        } else {
+          if(w){
+            const newLot = oldLot + lot;
+            const avg = oldLot>0 ? oldAvg : ((num(t.cash) - num(t.realized))/(lot*100));
+            upd = { ...w, owned:true, lot:String(newLot), avgBuy:String(Math.round(avg*100)/100) };
+          } else ok = false;
+          const after = num(alo.rdn) - num(t.cash);
+          if(after<0) note = 'Saldo RDN saat ini lebih kecil dari hasil penjualan itu, saldo di-nol-kan — periksa kembali saldo Anda.';
+          alo.rdn = Math.max(0, Math.round(after*100)/100);
+        }
+        if(upd){ upd.updatedAt = new Date().toISOString(); wl.value[idx] = upd; }
+        if(!ok) note = 'Saldo RDN dikembalikan, tetapi lot ' + t.kode + ' tidak bisa dikembalikan otomatis (saham tidak ada atau lot tidak cukup) — periksa di Watchlist.';
+        else if(note==='Catatan transaksi dihapus.') note = 'Catatan dihapus; saldo RDN dan lot dikembalikan.';
+      }
+      alo.trades.splice(i,1);
+      wlStatus.value = note;
+      saveWatch().then(()=>{ if(note!=='Catatan dihapus; saldo RDN dan lot dikembalikan.' && note!=='Catatan transaksi dihapus.') wlStatus.value = note; });
+    }
     function setTrxType(t){ trx.type = t; trx.kode = ''; trx.harga = ''; trxMsg.value = ''; }
     function pickTrx(){
       const w = wl.value.find(x=>x.kode===trx.kode);
@@ -1216,7 +1256,7 @@ createApp({
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
       METHODS, cfg, wf, analyzed, shownList, cnt, wSum,
       submitWatch, startEditWatch, cancelEditWatch, deleteWatch, saveWatch, resetCfg, refreshPrices,
-      alo, al, verdictColor, stClass, trx, trxMsg, trxOptions, trxPrev, tradesShown, totalFee, totalRealized, setTrxType, pickTrx, submitTrx,
+      alo, al, verdictColor, stClass, trx, trxMsg, trxOptions, trxPrev, tradesShown, totalFee, totalRealized, setTrxType, pickTrx, submitTrx, deleteTrx,
       cashAmt, ubahCash, setSaldo, setTarget, resetTargets, saveAlo, markRebalanced,
       parseInt
     };
