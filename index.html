@@ -413,6 +413,29 @@
       </div>
     </details>
 
+    <details class="glass-card">
+      <summary class="p-4 font-bold text-slate-800">🎯 Target Alokasi per Saham</summary>
+      <div class="px-4 pb-4 space-y-3">
+        <p class="text-[11px] text-slate-500 leading-relaxed">Tentukan target persen tiap saham terhadap total aset (saham + RDN). Kosongkan = otomatis dibagi rata dari sisa setelah target cash dan target saham lain (hanya untuk saham yang dimiliki). Saham Watchlist yang belum dimiliki ikut masuk tabel alokasi dan saran DCA jika targetnya diisi lebih dari 0.</p>
+        <div v-if="tgtList.length" class="space-y-2">
+          <div v-for="x in tgtList" :key="x.kode" class="flex items-center gap-3 rounded-2xl p-2.5 border border-slate-200" style="background:rgba(255,255,255,.6);">
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-bold text-slate-800">{{ x.kode }}{{ x.held ? ' 📦' : '' }}</p>
+              <p class="text-[11px] text-slate-400 truncate">{{ x.nama || '—' }} · alokasi sekarang {{ x.pct.toFixed(1) }}%</p>
+            </div>
+            <div style="width:110px;"><input type="number" min="0" step="0.5" :value="x.custom===null ? '' : x.custom" :placeholder="x.auto!==null ? x.auto.toFixed(1) : (x.held ? 'auto' : '0')" @input="setTargetLocal(x.kode, $event.target.value)" class="input-field"></div>
+            <span class="text-xs text-slate-400">%</span>
+          </div>
+        </div>
+        <p v-else class="text-xs text-slate-500">Watchlist masih kosong. Tambahkan saham di tab Watchlist.</p>
+        <p class="text-[11px]" :class="Math.abs(al.targetSum-100)>0.05 ? 'text-rose-600' : 'text-slate-500'">Target cash {{ num(alo.cashTarget).toFixed(1) }}% · Total target (saham + cash): <strong>{{ al.targetSum.toFixed(1) }}%</strong> {{ Math.abs(al.targetSum-100)>0.05 ? '— idealnya 100%' : '' }}</p>
+        <div class="flex gap-2">
+          <button type="button" @click="saveAlo" class="btn-primary flex-1 btn-sm">💾 Simpan target</button>
+          <button type="button" @click="resetTargets" class="btn-secondary flex-1 btn-sm">↩️ Kosongkan semua (auto)</button>
+        </div>
+      </div>
+    </details>
+
     <div class="glass-card p-4 overflow-x-auto scrollbar-thin">
       <h2 class="font-bold text-slate-800 mb-3">📊 Posisi & Alokasi</h2>
       <table class="watch-table" style="min-width:1040px;">
@@ -450,20 +473,20 @@
             <td class="num text-slate-600">{{ al.cashShort ? '⚠️ cash kurang dari DCA' : '—' }}</td>
           </tr>
           <tr v-for="r in al.list" :key="r.kode">
-            <td class="code">{{ r.kode }} <span class="text-[10px] font-normal text-slate-400">{{ r.sinyal }}</span></td>
+            <td class="code">{{ r.kode }} <span class="text-[10px] font-normal text-slate-400">{{ r.held ? r.sinyal : 'belum punya' }}</span></td>
             <td class="num text-slate-600">{{ r.lot }}</td>
-            <td class="num text-slate-600">{{ fmtRp(r.avgBuy) }}</td>
+            <td class="num text-slate-600">{{ r.held ? fmtRp(r.avgBuy) : '—' }}</td>
             <td class="num text-slate-700 font-semibold">{{ r.hargaOk ? fmtRp(r.price) : '—' }}</td>
-            <td class="num text-slate-600">{{ fmtRp(r.modal) }}</td>
+            <td class="num text-slate-600">{{ r.held ? fmtRp(r.modal) : '—' }}</td>
             <td class="num text-slate-700 font-semibold">{{ fmtRp(r.nilai) }}</td>
-            <td class="num font-semibold" :class="pctColor(r.gl)">{{ fmtRpS(r.gl) }}</td>
+            <td class="num font-semibold" :class="pctColor(r.held ? r.gl : null)">{{ r.held ? fmtRpS(r.gl) : '—' }}</td>
             <td class="num font-semibold" :class="pctColor(r.glPct)">{{ fmtPct(r.glPct) }}</td>
             <td class="num font-semibold">{{ r.pct.toFixed(1) }}%</td>
-            <td class="num"><input type="number" min="0" step="0.5" :value="r.custom ? r.target : ''" :placeholder="r.target.toFixed(1)" @change="setTarget(r.kode, $event.target.value)" class="input-field mini-input"></td>
+            <td class="num text-slate-600">{{ r.target.toFixed(1) }}% <span v-if="!r.custom" class="text-[10px] text-slate-400">auto</span></td>
             <td class="num font-semibold" :class="r.status==='Seimbang' ? 'text-slate-600' : (r.status==='Overweight' ? 'text-rose-600' : 'text-amber-600')">{{ (r.drift>=0?'+':'') + r.drift.toFixed(1) }}</td>
             <td><span class="status-badge" :class="stClass(r.status)">{{ r.status }}</span></td>
             <td class="num text-slate-700">
-              <template v-if="!r.elig"><span class="text-rose-600 text-[11px]">tahan (sinyal Jual)</span></template>
+              <template v-if="!r.elig"><span class="text-rose-600 text-[11px]">tahan (sinyal {{ r.sinyal }})</span></template>
               <template v-else-if="r.dcaRp>0">{{ fmtRp(r.dcaRp) }}<br><span class="text-[10px] text-slate-400">≈ {{ r.dcaLot }} lot</span></template>
               <template v-else>—</template>
             </td>
@@ -483,7 +506,7 @@
         </tbody>
       </table>
       <p v-if="!al.list.length" class="text-center text-slate-500 text-sm py-6">Belum ada saham yang dimiliki. Di tab Watchlist, ubah saham → centang "Dimiliki", isi harga beli rata-rata dan jumlah lot.</p>
-      <p class="text-[11px] text-slate-500 mt-3">Kolom Target % kosong = otomatis sama rata dari sisa setelah target cash. Isi untuk menetapkan target sendiri (total target termasuk cash idealnya 100%).</p>
+      <p class="text-[11px] text-slate-500 mt-3">Target % diatur di bagian "Target Alokasi per Saham" di atas; tanda "auto" berarti dibagi rata dari sisa target. Saham yang belum dimiliki tampil di sini jika targetnya diisi lebih dari 0.</p>
     </div>
 
     <div class="glass-card p-4">
@@ -984,18 +1007,20 @@ createApp({
     }
 
     const al = computed(()=>{
-      const hs = analyzed.value.filter(w=>w.owned && num(w.lot)>0);
+      const customOf = k => { const tv = alo.targets[k]; return (tv===undefined||tv===null||tv===''||isNaN(Number(tv))) ? null : Number(tv); };
+      const hs = analyzed.value.filter(w=> (w.owned && num(w.lot)>0) || (customOf(w.kode)!==null && customOf(w.kode)>0));
       const rdn = Math.max(0, num(alo.rdn));
       const band = Math.max(0, num(alo.band));
       const dca = Math.max(0, num(alo.dca));
       const cashT = clamp(num(alo.cashTarget), 0, 100);
 
       const base = hs.map(w=>{
-        const lot = num(w.lot), lembar = lot*100;
+        const held = !!(w.owned && num(w.lot)>0);
+        const lot = held ? num(w.lot) : 0, lembar = lot*100;
         const hargaOk = w.price>0;
         const harga = hargaOk ? w.price : w.avgBuy;
         const modal = w.avgBuy*lembar, nilai = harga*lembar, gl = nilai-modal;
-        return { kode:w.kode, lot, lembar, avgBuy:w.avgBuy, price:w.price, hargaOk, modal, nilai, gl,
+        return { kode:w.kode, held, lot, lembar, avgBuy:w.avgBuy, price:w.price, hargaOk, modal, nilai, gl,
                  glPct: modal>0 ? gl/modal : null, sinyal:w.sinyal };
       });
       const totalSaham = base.reduce((a,r)=>a+r.nilai,0);
@@ -1005,7 +1030,9 @@ createApp({
       const total = totalSaham + rdn;
       const newTotal = total + dca;
       const n = base.length;
-      const defT = n ? (100-cashT)/n : 0;
+      const customSum = base.reduce((a,r)=>a + (customOf(r.kode)!==null ? customOf(r.kode) : 0),0);
+      const autoN = base.filter(r=>customOf(r.kode)===null).length;
+      const defT = autoN ? Math.max(0, 100-cashT-customSum)/autoN : 0;
 
       let list = base.map(r=>{
         const tv = alo.targets[r.kode];
@@ -1015,7 +1042,7 @@ createApp({
         const drift = pct-target;
         const status = drift>band ? 'Overweight' : (drift<-band ? 'Underweight' : 'Seimbang');
         const gapRp = target/100*total - r.nilai;
-        const elig = r.sinyal!=='Jual';
+        const elig = r.sinyal!=='Jual' && r.sinyal!=='Mahal';
         const gapDca = elig ? Math.max(0, target/100*newTotal - r.nilai) : 0;
         return { ...r, custom, target, pct, drift, status, gapRp, elig, gapDca };
       });
@@ -1098,9 +1125,18 @@ createApp({
       if(!(v>=0)) return;
       alo.rdn = v; cashAmt.value = ''; saveWatch();
     }
-    function setTarget(kode, v){
+    const tgtList = computed(()=>{
+      const byKode = {};
+      al.value.list.forEach(r=>{ byKode[r.kode] = r; });
+      return analyzed.value.map(w=>{
+        const r = byKode[w.kode];
+        const tv = alo.targets[w.kode];
+        const custom = (tv===undefined||tv===null||tv===''||isNaN(Number(tv))) ? null : Number(tv);
+        return { kode:w.kode, nama:w.nama, held:!!(w.owned && num(w.lot)>0), pct: r ? r.pct : 0, custom, auto: (r && custom===null) ? r.target : null };
+      }).sort((a,b)=> (Number(b.held)-Number(a.held)) || a.kode.localeCompare(b.kode));
+    });
+    function setTargetLocal(kode, v){
       if(v===''||v===null||isNaN(Number(v))) delete alo.targets[kode]; else alo.targets[kode] = Math.max(0, Number(v));
-      saveWatch();
     }
     function resetTargets(){ alo.targets = {}; saveWatch(); }
     function saveAlo(){ saveWatch(); }
@@ -1286,7 +1322,7 @@ createApp({
       METHODS, cfg, wf, analyzed, shownList, cnt, wSum,
       submitWatch, startEditWatch, cancelEditWatch, deleteWatch, saveWatch, resetCfg, refreshPrices,
       alo, al, verdictColor, stClass, trx, trxMsg, trxOptions, trxPrev, tradesShown, totalFee, totalRealized, setTrxType, pickTrx, submitTrx, deleteTrx, trades, trxFrom, trxTo, resetTrxFilter,
-      cashAmt, ubahCash, setSaldo, setTarget, resetTargets, saveAlo, markRebalanced,
+      cashAmt, ubahCash, setSaldo, setTargetLocal, tgtList, resetTargets, saveAlo, markRebalanced,
       parseInt
     };
   }
