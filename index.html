@@ -1044,7 +1044,9 @@ createApp({
         const gapRp = target/100*total - r.nilai;
         const elig = r.sinyal!=='Jual' && r.sinyal!=='Mahal';
         const gapDca = elig ? Math.max(0, target/100*newTotal - r.nilai) : 0;
-        return { ...r, custom, target, pct, drift, status, gapRp, elig, gapDca };
+        const lotCostS = (r.price>0 ? r.price : r.avgBuy)*100;
+        const sellLot = (r.held && gapRp<0 && lotCostS>0) ? Math.min(r.lot, Math.max(1, Math.round(-gapRp/lotCostS))) : 0;
+        return { ...r, custom, target, pct, drift, status, gapRp, elig, gapDca, sellLot, sellRp: sellLot*lotCostS };
       });
 
       const sumGap = list.reduce((a,r)=>a+r.gapDca,0);
@@ -1085,7 +1087,7 @@ createApp({
       } else if(heavy.length){
         verdict = { level:'trim', icon:'🚨', title:'Rebalancing sekarang',
           text:'Ada saham yang kelebihan bobot lebih dari 2× batas selisih — selain mengarahkan DCA ke saham lain, pertimbangkan mengurangi sebagian.',
-          lines: heavy.map(r=> r.kode + ': kelebihan ' + r.drift.toFixed(1) + ' poin (≈ ' + fmtRp(-r.gapRp) + ' di atas target)') };
+          lines: heavy.map(r=> r.kode + ': kelebihan ' + r.drift.toFixed(1) + ' poin (≈ ' + fmtRp(-r.gapRp) + ' di atas target) → jual ≈ ' + r.sellLot + ' lot dari ' + r.lot + ' lot (≈ ' + fmtRp(r.sellRp) + ') agar seimbang') };
         if(dca>0 && underGap>0) verdict.lines.push('Sisi kurang bobot butuh ≈ ' + fmtRp(underGap) + ' (≈ ' + Math.ceil(underGap/dca) + ' bulan DCA).');
       } else if(over.length || under.length){
         verdict = { level:'dca', icon:'⚖️', title:'Perlu penyeimbangan — cukup lewat DCA',
