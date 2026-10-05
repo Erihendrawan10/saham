@@ -266,7 +266,7 @@
             </div>
             <div>
               <label class="text-xs text-slate-400 block mb-1">Harga Saat Ini (Rp)</label>
-              <input type="number" step="any" v-model="wf.price" placeholder="otomatis dari Yahoo Finance" class="input-field">
+              <input type="number" step="any" v-model="wf.price" placeholder="Harga" class="input-field">
             </div>
             <div>
               <label class="text-xs text-slate-400 block mb-1">Dimiliki?</label>
@@ -583,14 +583,14 @@
     <div class="glass-card p-4">
       <h2 class="font-bold text-slate-800 mb-3">📋 Catatan Penting</h2>
       <div class="text-xs text-slate-600 space-y-2 leading-relaxed">
-        <p><strong>Sumber harga:</strong> Yahoo Finance (kode IDX otomatis menjadi KODE.JK), delay sekitar 15 menit. Fundamental (EPS, BVPS, DPS, ROE) diisi manual dari laporan keuangan.</p>
+        <p><strong>Fundamental:</strong> EPS, BVPS, DPS, ROE diisi manual dari laporan keuangan.</p>
         <p><strong>Update metode valuasi:</strong> Sesuaikan COE, MOS, dan bobot setiap 3–6 bulan mengikuti kondisi pasar (BI rate, yield obligasi, PER rata-rata).</p>
         <p><strong>Default (Okt 2026):</strong> COE 13%, MOS 30%.</p>
       </div>
     </div>
   </div>
 
-  <div class="text-center text-[11px] text-slate-500 mt-8 opacity-70">🚀 Tracking Saham v6.0 · Harga: Yahoo Finance</div>
+  <div class="text-center text-[11px] text-slate-500 mt-8 opacity-70">🚀 Tracking Saham v6.1</div>
 
   <!-- MOBILE TAB BAR -->
   <div class="lg:hidden fixed bottom-0 inset-x-0 z-50 px-4 pb-4">
@@ -1061,7 +1061,7 @@ createApp({
       
       // Total equity dari Portfolio terakhir (nilai sebenarnya dari seluruh investasi)
       const lastEquity = lastRow.value ? lastRow.value.equity : 0;
-      // Total P&L: lastEquity - totalInvested, dibagi dengan lastEquity (total nilai)
+      // Total P&L: lastEquity - totalInvested, dibagi dengan lastEquity (total equity/nilai)
       const totalGl = lastEquity - totalInvested;
       const totalGlPct = lastEquity>0 ? totalGl/lastEquity : null;
       const total = lastEquity + rdn;
