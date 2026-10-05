@@ -80,6 +80,7 @@
           <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">🧮 NAB saat ini</p><p class="text-[15px] font-bold text-white">{{ fmtRp(lastRow.nab) }}</p></div>
           <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">{{ totalReturn>=0 ? '🚀' : '📉' }} Return kumulatif</p><p class="text-[15px] font-bold" :class="totalReturn>=0 ? 'text-emerald-100' : 'text-rose-100'">{{ fmtPct(totalReturn) }}</p></div>
           <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">📅 Per {{ fmtDate(lastRow.date) }}</p><p class="text-[15px] font-bold text-white">{{ computedRows.length }} entri</p></div>
+          <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">💵 Total dana</p><p class="text-[15px] font-bold text-white">{{ fmtRp(totalDana) }}</p></div>
         </div>
       </div>
 
@@ -1334,6 +1335,7 @@ createApp({
     const lastRow = computed(()=> computedRows.value[computedRows.value.length-1] || null);
     const totalReturn = computed(()=> lastRow.value ? lastRow.value.nab/1000 - 1 : 0);
     const cagr = computed(()=> computeCAGR(computedRows.value));
+    const totalDana = computed(()=> computedRows.value.reduce((a,r)=>a+r.dana,0));
     const totalDividenAllTime = computed(()=> computedRows.value.reduce((a,r)=>a+(r.dividen||0),0));
     const years = computed(()=> getAvailableYears(computedRows.value));
     const activeComputed = computed(()=> yearFilter.value==='all' ? computedRows.value : getYearSlice(computedRows.value, parseInt(yearFilter.value)));
@@ -1374,7 +1376,7 @@ createApp({
       fDate, fDana, fEquity, fDividen, fIhsg, scriptUrlInput,
       fmtRp, fmtRpS, fmtPct, fmtDate, pctColor, cagrColor, num,
       syncStatus, connectScript,
-      computedRows, reversedComputedRows, lastRow, totalReturn, cagr, totalDividenAllTime,
+      computedRows, reversedComputedRows, lastRow, totalReturn, cagr, totalDana, totalDividenAllTime,
       years, activeComputed, yearStats, prevYearStats, chartSvg, editingEntry,
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
       METHODS, cfg, wf, analyzed, shownList, cnt, wSum,
