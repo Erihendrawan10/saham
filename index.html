@@ -50,8 +50,6 @@
   .watch-table tr:hover{background:rgba(52,211,153,.05)}
   .watch-table .code{font-weight:700;color:#1E293B}
   .watch-table .num{text-align:right;font-variant-numeric:tabular-nums}
-  .watch-table tr.cash-row{background:rgba(251,191,36,.12)}
-  .watch-table tr.cash-row:hover{background:rgba(251,191,36,.18)}
   .mini-input{width:80px;padding:.35rem .5rem;font-size:12px;text-align:right;border-radius:.6rem}
 </style>
 </head>
@@ -361,12 +359,13 @@
 
     <div class="hero-card">
       <div class="hero-glow"></div>
-      <p class="text-emerald-50/80 text-xs font-semibold mb-1 relative">🧩 Total aset (saham + RDN)</p>
-      <p class="text-4xl font-extrabold text-white relative">{{ fmtRp(al.total) }}</p>
+      <p class="text-emerald-50/80 text-xs font-semibold mb-1 relative">🧩 Total Equity (Cash + Invested + P&L)</p>
+      <p class="text-5xl font-extrabold text-white relative">{{ fmtRp(al.total) }}</p>
       <div class="flex gap-4 mt-4 pt-4 border-t border-white/20 flex-wrap relative">
-        <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">📦 Nilai saham</p><p class="text-[15px] font-bold text-white">{{ fmtRp(al.totalSaham) }}</p></div>
-        <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">{{ al.totalGl>=0 ? '🚀' : '📉' }} Gain/Loss</p><p class="text-[15px] font-bold" :class="al.totalGl>=0 ? 'text-emerald-100' : 'text-rose-100'">{{ fmtRpS(al.totalGl) }} ({{ fmtPct(al.totalGlPct) }})</p></div>
-        <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">💵 Cash RDN</p><p class="text-[15px] font-bold text-white">{{ al.cashPct.toFixed(1) }}%</p></div>
+        <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">💵 Cash</p><p class="text-[15px] font-bold text-white">{{ fmtRp(alo.rdn) }}</p></div>
+        <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">💼 Invested</p><p class="text-[15px] font-bold text-white">{{ fmtRp(al.totalInvested) }}</p></div>
+        <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">{{ al.totalGl>=0 ? '🚀' : '📉' }} P&L</p><p class="text-[15px] font-bold" :class="al.totalGl>=0 ? 'text-emerald-100' : 'text-rose-100'">{{ fmtRpS(al.totalGl) }}</p></div>
+        <div class="flex-1 min-w-[92px]"><p class="text-[11px] text-emerald-50/70">📈 Gain</p><p class="text-[15px] font-bold" :class="al.totalGl>=0 ? 'text-emerald-100' : 'text-rose-100'">{{ fmtPct(al.totalGlPct) }}</p></div>
       </div>
     </div>
 
@@ -457,21 +456,6 @@
           </tr>
         </thead>
         <tbody>
-          <tr class="cash-row">
-            <td class="code">Cash</td>
-            <td class="num text-slate-400">—</td>
-            <td class="num text-slate-400">—</td>
-            <td class="num text-slate-400">—</td>
-            <td class="num text-slate-400">—</td>
-            <td class="num font-semibold text-slate-700">{{ fmtRp(alo.rdn) }}</td>
-            <td class="num text-slate-400">—</td>
-            <td class="num text-slate-400">—</td>
-            <td class="num font-semibold">{{ al.cashPct.toFixed(1) }}%</td>
-            <td class="num text-slate-600">{{ num(alo.cashTarget).toFixed(1) }}%</td>
-            <td class="num font-semibold" :class="al.cashDrift>=0 ? 'text-amber-600' : 'text-slate-600'">{{ (al.cashDrift>=0?'+':'') + al.cashDrift.toFixed(1) }}</td>
-            <td class="text-[11px] text-slate-500">Ubah saldo di Parameter</td>
-            <td class="num text-slate-600">{{ al.cashShort ? '⚠️ cash kurang dari DCA' : '—' }}</td>
-          </tr>
           <tr v-for="r in al.list" :key="r.kode">
             <td class="code">{{ r.kode }} <span class="text-[10px] font-normal text-slate-400">{{ r.held ? r.sinyal : 'belum punya' }}</span></td>
             <td class="num text-slate-600">{{ r.lot }}</td>
@@ -490,18 +474,6 @@
               <template v-else-if="r.dcaRp>0">{{ fmtRp(r.dcaRp) }}<br><span class="text-[10px] text-slate-400">≈ {{ r.dcaLot }} lot</span></template>
               <template v-else>—</template>
             </td>
-          </tr>
-          <tr v-if="al.list.length" style="background:rgba(15,23,42,.04);">
-            <td class="code">Total</td>
-            <td class="num"></td><td class="num"></td><td class="num"></td>
-            <td class="num font-semibold">{{ fmtRp(al.totalModal + getTotalFee()) }}</td>
-            <td class="num font-semibold">{{ fmtRp(al.totalSaham + alo.rdn) }}</td>
-            <td class="num font-semibold" :class="pctColor(al.totalGl)">{{ fmtRpS(al.totalGl) }}</td>
-            <td class="num font-semibold" :class="pctColor(al.totalGlPct)">{{ fmtPct(al.totalGlPct) }}</td>
-            <td class="num font-semibold">100%</td>
-            <td class="num font-semibold" :class="Math.abs(al.targetSum-100)>0.05 ? 'text-rose-600' : 'text-slate-600'">{{ al.targetSum.toFixed(1) }}%</td>
-            <td></td><td></td>
-            <td class="num font-semibold">{{ al.dcaTotal>0 ? fmtRp(al.dcaTotal) : '—' }}</td>
           </tr>
         </tbody>
       </table>
@@ -590,7 +562,7 @@
     </div>
   </div>
 
-  <div class="text-center text-[11px] text-slate-500 mt-8 opacity-70">🚀 Tracking Saham v6.1</div>
+  <div class="text-center text-[11px] text-slate-500 mt-8 opacity-70">🚀 Tracking Saham v6.2</div>
 
   <!-- MOBILE TAB BAR -->
   <div class="lg:hidden fixed bottom-0 inset-x-0 z-50 px-4 pb-4">
@@ -1064,6 +1036,7 @@ createApp({
       // Total P&L: lastEquity - totalInvested, dibagi dengan lastEquity (total equity/nilai)
       const totalGl = lastEquity - totalInvested;
       const totalGlPct = lastEquity>0 ? totalGl/lastEquity : null;
+      // Total Equity = Cash + Invested + P&L (= saldo RDN + equity portofolio terakhir)
       const total = lastEquity + rdn;
       const newTotal = total + dca;
       const n = base.length;
@@ -1141,7 +1114,7 @@ createApp({
       if(n && Math.abs(targetSum-100)>0.05) verdict.lines.push('Total target = ' + targetSum.toFixed(1) + '% (idealnya 100% termasuk cash).');
 
       const cashShort = dca>0 && rdn<dca;
-      return { cashShort, list, total, totalSaham, totalModal, totalGl, totalGlPct, cashPct, cashDrift, targetSum, dcaTotal, nextDate, daysLeft, due, verdict };
+      return { cashShort, list, total, totalSaham, totalModal, totalInvested, totalGl, totalGlPct, cashPct, cashDrift, targetSum, dcaTotal, nextDate, daysLeft, due, verdict };
     });
 
     const verdictColor = computed(()=>{
