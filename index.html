@@ -1044,14 +1044,19 @@ createApp({
         const lot = held ? num(w.lot) : 0, lembar = lot*100;
         const hargaOk = w.price>0;
         const harga = hargaOk ? w.price : w.avgBuy;
-        const modal = w.avgBuy*lembar, nilai = harga*lembar, gl = nilai-modal;
-        return { kode:w.kode, held, lot, lembar, avgBuy:w.avgBuy, price:w.price, hargaOk, modal, nilai, gl,
-                 glPct: modal>0 ? gl/modal : null, sinyal:w.sinyal };
+        const modal = w.avgBuy*lembar;
+        const totalFeeStock = getFeeForStock(w.kode);
+        const modalWithFee = modal + totalFeeStock;
+        const nilai = harga*lembar, gl = nilai-modalWithFee;
+        return { kode:w.kode, held, lot, lembar, avgBuy:w.avgBuy, price:w.price, hargaOk, modal, modalWithFee, nilai, gl,
+                 glPct: modalWithFee>0 ? gl/modalWithFee : null, sinyal:w.sinyal };
       });
       const totalSaham = base.reduce((a,r)=>a+r.nilai,0);
       const totalModal = base.reduce((a,r)=>a+r.modal,0);
-      const totalGl = totalSaham-totalModal;
-      const totalGlPct = totalModal>0 ? totalGl/totalModal : null;
+      const totalFeeAll = getTotalFee();
+      const totalModalWithFee = totalModal + totalFeeAll;
+      const totalGl = totalSaham-totalModalWithFee;
+      const totalGlPct = totalModalWithFee>0 ? totalGl/totalModalWithFee : null;
       const total = totalSaham + rdn;
       const newTotal = total + dca;
       const n = base.length;
