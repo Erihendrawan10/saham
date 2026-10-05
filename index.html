@@ -1061,9 +1061,9 @@ createApp({
       
       // Total equity dari Portfolio terakhir (nilai sebenarnya dari seluruh investasi)
       const lastEquity = lastRow.value ? lastRow.value.equity : 0;
-      // Total P&L: lastEquity - totalInvested, dibagi dengan totalInvested
+      // Total P&L: lastEquity - totalInvested, dibagi dengan lastEquity (total nilai)
       const totalGl = lastEquity - totalInvested;
-      const totalGlPct = totalInvested>0 ? totalGl/totalInvested : null;
+      const totalGlPct = lastEquity>0 ? totalGl/lastEquity : null;
       const total = lastEquity + rdn;
       const newTotal = total + dca;
       const n = base.length;
