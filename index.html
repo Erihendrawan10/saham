@@ -1056,10 +1056,14 @@ createApp({
       const totalFeeAll = getTotalFee();
       const totalModalWithFee = totalModal + totalFeeAll;
       
+      // Total Invested dari Portfolio (semua dana yang disetorkan)
+      const totalInvested = computedRows.value.reduce((a,r)=>a+r.dana,0);
+      
       // Total equity dari Portfolio terakhir (nilai sebenarnya dari seluruh investasi)
       const lastEquity = lastRow.value ? lastRow.value.equity : 0;
-      const totalGl = lastEquity - totalModalWithFee;
-      const totalGlPct = totalModalWithFee>0 ? totalGl/totalModalWithFee : null;
+      // Total P&L: lastEquity - totalInvested, dibagi dengan totalInvested
+      const totalGl = lastEquity - totalInvested;
+      const totalGlPct = totalInvested>0 ? totalGl/totalInvested : null;
       const total = lastEquity + rdn;
       const newTotal = total + dca;
       const n = base.length;
