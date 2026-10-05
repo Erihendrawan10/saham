@@ -1055,9 +1055,12 @@ createApp({
       const totalModal = base.reduce((a,r)=>a+r.modal,0);
       const totalFeeAll = getTotalFee();
       const totalModalWithFee = totalModal + totalFeeAll;
-      const totalGl = totalSaham-totalModalWithFee;
+      
+      // Total equity dari Portfolio terakhir (nilai sebenarnya dari seluruh investasi)
+      const lastEquity = lastRow.value ? lastRow.value.equity : 0;
+      const totalGl = lastEquity - totalModalWithFee;
       const totalGlPct = totalModalWithFee>0 ? totalGl/totalModalWithFee : null;
-      const total = totalSaham + rdn;
+      const total = lastEquity + rdn;
       const newTotal = total + dca;
       const n = base.length;
       const customSum = base.reduce((a,r)=>a + (customOf(r.kode)!==null ? customOf(r.kode) : 0),0);
@@ -1181,21 +1184,61 @@ createApp({
       const w = wl.value[idx];
       const lot = parseFloat(trx.lot), harga = parseFloat(trx.harga);
       const oldLot = num(w.lot), oldAvg = num(w.avgBuy);
+      
+      // Jika sedang edit transaksi lama, reverse dulu efeknya
+      if(editingTradeId.value){
+        const tIdx = trades.value.findIndex(t=>t.id===editingTradeId.value);
+        if(tIdx<0){ trxMsg.value = 'Transaksi tidak ditemukan.'; return; }
+        
+        const oldTrx = trades.value[tIdx];
+        const oldLot_trx = num(oldTrx.lot), oldHarga_trx = num(oldTrx.harga);
+        const oldFee_trx = num(oldTrx.fee), oldCash_trx = num(oldTrx.cash);
+        
+        // Reverse efek transaksi lama
+        if(oldTrx.type==='beli'){
+          // Transaksi lama adalah beli: kurangi lot, kembalikan RDN
+          const reverseLot = oldLot - oldLot_trx;
+          if(reverseLot>0){
+            const reverseAvg = ((oldLot*oldAvg - oldLot_trx*oldHarga_trx)/reverseLot);
+            w.lot = String(reverseLot);
+            w.avgBuy = String(Math.round(reverseAvg*100)/100);
+          } else {
+            w.owned = false;
+            w.lot = '';
+            w.avgBuy = '';
+          }
+          alo.rdn = Math.max(0, Math.round((num(alo.rdn) - oldCash_trx)*100)/100);
+        } else {
+          // Transaksi lama adalah jual: tambah lot kembali, kurangi RDN
+          const reverseLot = oldLot + oldLot_trx;
+          const reverseAvg = oldLot>0 ? oldAvg : ((oldCash_trx - num(oldTrx.realized))/(oldLot_trx*100));
+          w.owned = true;
+          w.lot = String(reverseLot);
+          w.avgBuy = String(Math.round(reverseAvg*100)/100);
+          const afterReverse = num(alo.rdn) - oldCash_trx;
+          if(afterReverse<0){ trxMsg.value = 'Saldo RDN tidak cukup untuk reversal; periksa saldo Anda.'; return; }
+          alo.rdn = Math.max(0, Math.round(afterReverse*100)/100);
+        }
+      }
+      
+      // Sekarang apply transaksi baru
+      const latestLot = num(w.lot), latestAvg = num(w.avgBuy);
       let realized = null, upd;
       if(trx.type==='beli'){
         if(p.after<0){ trxMsg.value = 'Saldo RDN tidak cukup. Butuh ' + fmtRp(-p.cash) + ', saldo ' + fmtRp(alo.rdn) + '.'; return; }
-        const newLot = oldLot + lot;
-        const newAvg = Math.round(((oldLot*oldAvg + lot*harga)/newLot)*100)/100;
+        const newLot = latestLot + lot;
+        const newAvg = Math.round(((latestLot*latestAvg + lot*harga)/newLot)*100)/100;
         upd = { ...w, owned:true, lot:String(newLot), avgBuy:String(newAvg) };
       } else {
-        if(lot>oldLot){ trxMsg.value = 'Lot jual (' + lot + ') melebihi lot dimiliki (' + oldLot + ').'; return; }
-        realized = p.cash - oldAvg*lot*100;
-        const newLot = oldLot - lot;
+        if(lot>latestLot){ trxMsg.value = 'Lot jual (' + lot + ') melebihi lot dimiliki (' + latestLot + ').'; return; }
+        realized = p.cash - latestAvg*lot*100;
+        const newLot = latestLot - lot;
         upd = newLot>0 ? { ...w, lot:String(newLot) } : { ...w, owned:false, lot:'', avgBuy:'' };
       }
       upd.updatedAt = new Date().toISOString();
       wl.value[idx] = upd;
       alo.rdn = Math.max(0, Math.round((num(alo.rdn) + p.cash)*100)/100);
+      
       if(editingTradeId.value){
         const tIdx = trades.value.findIndex(t=>t.id===editingTradeId.value);
         if(tIdx>=0){
