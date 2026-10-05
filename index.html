@@ -1028,16 +1028,14 @@ createApp({
       const totalFeeAll = getTotalFee();
       const totalModalWithFee = totalModal + totalFeeAll;
       
-      // Total Invested dari Portfolio (semua dana yang disetorkan)
-      const totalInvested = computedRows.value.reduce((a,r)=>a+r.dana,0);
-      
-      // Total equity dari Portfolio terakhir (nilai sebenarnya dari seluruh investasi)
-      const lastEquity = lastRow.value ? lastRow.value.equity : 0;
-      // Total P&L: lastEquity - totalInvested, dibagi dengan lastEquity (total equity/nilai)
-      const totalGl = lastEquity - totalInvested;
-      const totalGlPct = lastEquity>0 ? totalGl/lastEquity : null;
-      // Total Equity = Cash + Invested + P&L (= saldo RDN + equity portofolio terakhir)
-      const total = lastEquity + rdn;
+      // Invested = total kolom "Modal + Fee" pada tabel Posisi & Alokasi (saham yang dimiliki)
+      const totalInvested = base.reduce((a,r)=>a + (r.held ? r.modalWithFee : 0),0);
+      // P&L = total kolom "Gain/Loss (Rp)" = nilai saham - Invested
+      const totalGl = base.reduce((a,r)=>a + (r.held ? r.gl : 0),0);
+      // Gain = P&L / Invested
+      const totalGlPct = totalInvested>0 ? totalGl/totalInvested : null;
+      // Total Equity = Cash + Invested + P&L (= saldo RDN + nilai saham)
+      const total = rdn + totalInvested + totalGl;
       const newTotal = total + dca;
       const n = base.length;
       const customSum = base.reduce((a,r)=>a + (customOf(r.kode)!==null ? customOf(r.kode) : 0),0);
