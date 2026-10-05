@@ -445,7 +445,7 @@
             <th class="num">Lot</th>
             <th class="num">Harga Beli</th>
             <th class="num">Harga Kini</th>
-            <th class="num">Modal</th>
+            <th class="num">Modal + Fee</th>
             <th class="num">Nilai</th>
             <th class="num">Gain/Loss (Rp)</th>
             <th class="num">Gain/Loss (%)</th>
@@ -458,7 +458,7 @@
         </thead>
         <tbody>
           <tr class="cash-row">
-            <td class="code">💵 RDN / Cash</td>
+            <td class="code">Cash</td>
             <td class="num text-slate-400">—</td>
             <td class="num text-slate-400">—</td>
             <td class="num text-slate-400">—</td>
@@ -477,7 +477,7 @@
             <td class="num text-slate-600">{{ r.lot }}</td>
             <td class="num text-slate-600">{{ r.held ? fmtRp(r.avgBuy) : '—' }}</td>
             <td class="num text-slate-700 font-semibold">{{ r.hargaOk ? fmtRp(r.price) : '—' }}</td>
-            <td class="num text-slate-600">{{ r.held ? fmtRp(r.modal) : '—' }}</td>
+            <td class="num text-slate-600">{{ r.held ? fmtRp(r.modal + getFeeForStock(r.kode)) : '—' }}</td>
             <td class="num text-slate-700 font-semibold">{{ fmtRp(r.nilai) }}</td>
             <td class="num font-semibold" :class="pctColor(r.held ? r.gl : null)">{{ r.held ? fmtRpS(r.gl) : '—' }}</td>
             <td class="num font-semibold" :class="pctColor(r.glPct)">{{ fmtPct(r.glPct) }}</td>
@@ -494,11 +494,11 @@
           <tr v-if="al.list.length" style="background:rgba(15,23,42,.04);">
             <td class="code">Total</td>
             <td class="num"></td><td class="num"></td><td class="num"></td>
-            <td class="num font-semibold">{{ fmtRp(al.totalModal) }}</td>
-            <td class="num font-semibold">{{ fmtRp(al.totalSaham) }}</td>
+            <td class="num font-semibold">{{ fmtRp(al.totalModal + getTotalFee()) }}</td>
+            <td class="num font-semibold">{{ fmtRp(al.totalSaham + alo.rdn) }}</td>
             <td class="num font-semibold" :class="pctColor(al.totalGl)">{{ fmtRpS(al.totalGl) }}</td>
             <td class="num font-semibold" :class="pctColor(al.totalGlPct)">{{ fmtPct(al.totalGlPct) }}</td>
-            <td class="num font-semibold">{{ (100-al.cashPct).toFixed(1) }}%</td>
+            <td class="num font-semibold">100%</td>
             <td class="num font-semibold" :class="Math.abs(al.targetSum-100)>0.05 ? 'text-rose-600' : 'text-slate-600'">{{ al.targetSum.toFixed(1) }}%</td>
             <td></td><td></td>
             <td class="num font-semibold">{{ al.dcaTotal>0 ? fmtRp(al.dcaTotal) : '—' }}</td>
@@ -560,7 +560,7 @@
             <td class="num text-slate-600">{{ fmtRp(t.fee) }}</td>
             <td class="num font-semibold" :class="pctColor(t.cash)">{{ fmtRpS(t.cash) }}</td>
             <td class="num font-semibold" :class="pctColor(t.realized)">{{ t.realized===null || t.realized===undefined ? '—' : fmtRpS(t.realized) }}</td>
-            <td class="whitespace-nowrap"><button type="button" @click="deleteTrx(t.id)" class="text-rose-600 text-[11px] underline">Hapus</button></td>
+            <td class="whitespace-nowrap"><button type="button" @click="startEditTrade(t.id)" class="text-emerald-600 text-[11px] underline mr-2">Edit</button><button type="button" @click="deleteTrx(t.id)" class="text-rose-600 text-[11px] underline">Hapus</button></td>
           </tr>
         </tbody>
       </table></div>
@@ -623,6 +623,7 @@ createApp({
     const trades = ref([]);
     const trxFrom = ref(''); const trxTo = ref('');
     const editingId = ref(null);
+    const editingTradeId = ref(null);
     const yearFilter = ref('all');
     const wEditing = ref(null);
     const wlStatus = ref('');
@@ -639,6 +640,17 @@ createApp({
     const cagrColor = v => v===null||v===undefined ? 'text-slate-500' : (v>=0 ? 'text-emerald-600' : 'text-rose-600');
 
     const hasClaudeStorage = (typeof window.storage !== 'undefined');
+
+    // Helper: hitung total fee untuk saham tertentu
+    const getFeeForStock = (kode) => {
+      return trades.value
+        .filter(t => t.kode === kode)
+        .reduce((a, t) => a + (t.fee || 0), 0);
+    };
+
+    const getTotalFee = () => {
+      return trades.value.reduce((a, t) => a + (t.fee || 0), 0);
+    };
 
     // ========== WATCHLIST CONFIG ==========
     const METHODS = [ {k:'dcf',label:'DCF'}, {k:'pbv',label:'PBV'}, {k:'pe',label:'PE'}, {k:'ddm',label:'DDM'} ];
@@ -961,6 +973,19 @@ createApp({
     function resetTrxFilter(){ trxFrom.value = ''; trxTo.value = ''; }
     const totalFee = computed(()=> tradesShown.value.reduce((a,t)=>a+num(t.fee),0));
     const totalRealized = computed(()=> tradesShown.value.reduce((a,t)=>a+(t.realized===null||t.realized===undefined ? 0 : num(t.realized)),0));
+    
+    function startEditTrade(id){
+      const t = trades.value.find(x=>x.id===id);
+      if(!t) return;
+      editingTradeId.value = id;
+      trx.date = t.date;
+      trx.type = t.type;
+      trx.kode = t.kode;
+      trx.lot = String(t.lot);
+      trx.harga = String(t.harga);
+      trxMsg.value = '';
+    }
+
     function deleteTrx(id){
       const i = trades.value.findIndex(t=>t.id===id);
       if(i<0) return;
@@ -1166,7 +1191,15 @@ createApp({
       upd.updatedAt = new Date().toISOString();
       wl.value[idx] = upd;
       alo.rdn = Math.max(0, Math.round((num(alo.rdn) + p.cash)*100)/100);
-      trades.value.push({ id:'t_'+Date.now(), date:trx.date||todayStr(), type:trx.type, kode:w.kode, lot, harga, gross:p.gross, fee:p.fee, cash:p.cash, realized });
+      if(editingTradeId.value){
+        const tIdx = trades.value.findIndex(t=>t.id===editingTradeId.value);
+        if(tIdx>=0){
+          trades.value[tIdx] = { ...trades.value[tIdx], date:trx.date, type:trx.type, kode:w.kode, lot, harga, gross:p.gross, fee:p.fee, cash:p.cash, realized };
+          editingTradeId.value = null;
+        }
+      } else {
+        trades.value.push({ id:'t_'+Date.now(), date:trx.date||todayStr(), type:trx.type, kode:w.kode, lot, harga, gross:p.gross, fee:p.fee, cash:p.cash, realized });
+      }
       trx.lot = ''; trx.harga = '';
       saveWatch();
     }
@@ -1323,9 +1356,9 @@ createApp({
       submitEntry, startEdit, cancelEditEntry, deleteEntry,
       METHODS, cfg, wf, analyzed, shownList, cnt, wSum,
       submitWatch, startEditWatch, cancelEditWatch, deleteWatch, saveWatch, resetCfg, refreshPrices,
-      alo, al, verdictColor, stClass, trx, trxMsg, trxOptions, trxPrev, tradesShown, totalFee, totalRealized, setTrxType, pickTrx, submitTrx, deleteTrx, trades, trxFrom, trxTo, resetTrxFilter,
+      alo, al, verdictColor, stClass, trx, trxMsg, trxOptions, trxPrev, tradesShown, totalFee, totalRealized, setTrxType, pickTrx, submitTrx, deleteTrx, startEditTrade, trades, trxFrom, trxTo, resetTrxFilter,
       cashAmt, ubahCash, setSaldo, setTargetLocal, tgtList, resetTargets, saveAlo, markRebalanced,
-      parseInt
+      parseInt, getFeeForStock, getTotalFee
     };
   }
 }).mount('#app');
