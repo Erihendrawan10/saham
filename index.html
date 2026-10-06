@@ -1033,10 +1033,10 @@ createApp({
       const totalInvested = base.reduce((a,r)=>a + (r.held ? r.modalWithFee : 0),0);
       // P&L = total kolom "Gain/Loss (Rp)" = nilai saham - Invested
       const totalGl = base.reduce((a,r)=>a + (r.held ? r.gl : 0),0);
-      // Gain = P&L / Invested
-      const totalGlPct = totalInvested>0 ? totalGl/totalInvested : null;
       // Total Equity = Cash + Invested + P&L (= saldo RDN + nilai saham)
       const total = rdn + totalInvested + totalGl;
+      // Gain = P&L / Total Equity
+      const totalGlPct = total>0 ? totalGl/total : null;
       const newTotal = total + dca;
       const n = base.length;
       const customSum = base.reduce((a,r)=>a + (customOf(r.kode)!==null ? customOf(r.kode) : 0),0);
